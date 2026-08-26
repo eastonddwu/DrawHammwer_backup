@@ -1,0 +1,196 @@
+// Copyright 2021, Tencent Inc.
+// Author: bondshi<bondshi@tencent.com>
+// Create: 2021-05-28
+// Encoding: utf-8
+
+// agent config proto define
+
+syntax = "proto3";
+package tbus2.conf;
+option go_package = "pkg/proto/tbus2_ns";
+
+import "google/protobuf/wrappers.proto";
+
+////////////////////////////////////////////////////////////////////////////////
+
+message AgentConf {
+  uint64 agent_id = 1;
+  string desc = 2;
+  string mesh_url = 3;  // default: tcp://0.0.0.0:10731
+  string ad_mesh_url = 4;  // tcp://$host_ip:10731
+};
+
+message QueueItemConf {
+  // qid range: [0, 1], 0 is input queue, 1 is output queue
+  int32 qid = 1;
+  uint32 size_kb = 2;  // KB, max queue size is 2G
+};
+
+message QueueConf {
+  repeated QueueItemConf items = 1;
+};
+
+// busid_spec: 定义一个或者一组busid, 格式：
+// - 1.0.0.1: 确定一个busid
+// - 1.0.0.*: '*' 匹配一段busid [1, 255]
+// - 1.0.0.[1-10,15]: 匹配一个范围内的 busid
+message EndpointConf {
+  string busid_spec = 1;
+  string desc = 2;
+  uint64 agent_id = 3;
+  QueueConf qconf = 4;
+  uint32 module_version = 5;
+
+  // Loadblance 权重因子: [0, N], 默认为 100, 若为0 则关闭流量
+  google.protobuf.Int32Value lb_factor = 6;
+  uint32 shard_id = 7;
+};
+
+enum Consts {
+  RESERVED_0 = 0;
+  STANDARD_WEIGHT = 100;
+  DEFAULT_QUEUE_SIZE = 5120;  // default shm mq size: 5M, unit KB
+  ROUTE_C_HASH_MAX_REPLICA = 10000;
+};
+
+enum GroupType {
+  GROUP_TYPE_UNKNOWN = 0;
+  GROUP_TYPE_STATELESS = 1;
+  GROUP_TYPE_STATEFUL = 2;
+};
+
+// 基础路由策略
+enum RouteType {
+  ROUTE_TYPE_NONE = 0;
+  ROUTE_TYPE_RANDOM = 1;    // 随机
+  ROUTE_TYPE_M_HASH = 3;    // 简单取模Hash(按 group size)
+  ROUTE_TYPE_C_HASH = 4;    // 一致性Hash
+  ROUTE_TYPE_MASTER = 5;    // 选主发送
+};
+
+// 灰度规则：命中其中一个匹配规则，请求导入到策略中
+message GrayRouteRule {
+  // 匹配规则：按来源 busid，格式说明如上
+  string src_busid_spec = 1;
+
+  // 匹配规则：按消息 hash key 范围匹配
+  // Format:
+  //  - nnnn: set an hash key
+  //  - [a, b]: hash_key >= a && hask_key <= b
+  //  - a,b,[c,d]: a, b, c <= x <= d
+  string hash_key_spec = 2;
+
+  // 匹配规则：格式同hash_key_spec
+  string src_shard_id_spec = 8;
+
+  // 策略：要求为当前group下的具体endpoint成员
+  string dest_busid = 3;
+
+  // 策略：修改p2g的选路规则, 如果同时设置 dest_busid 时，优先 dest_busid 生效
+  // 如果部分参数未设置，保持消息原值
+  uint32 dest_shard_id = 4;
+  RouteType dest_route_type = 5;
+
+  // 策略：随机路由方式生效,其他路由方式无效
+  uint32 dest_min_version = 6;
+  uint32 dest_max_version = 7;
+};
+
+enum ShardRoutePolicy {
+  GROUP_SHARDING_SAFE = 0;  // 启用，若shard_id 不存在，则全组匹配
+  GROUP_SHARDING_STRICT = 1;  // 严格匹配shard_id，不存在报错
+  GROUP_SHARDING_OFF = 2;  // 取消shard_id匹配，默认全组匹配
+};
+
+message ShardWeight {
+  uint32 shard_id = 1;
+  uint32 weight = 2;
+}
+
+// 如果没有为Group 配置设置GroupConf, 则
+message GroupConf {
+  string group_id = 1;  // must be: x.y.0.0
+  string desc = 2;
+
+  // 该组所有支持的 route_type. 当存在 ROUTE_TYPE_M_HASH、ROUTE_TYPE_M_HASH、ROUTE_TYPE_MASTER 任意一个时即为有状态组；
+  // 首个 route_type 作为默认路由策略，在 API 发包时未指定路由策略时使用
+  repeated RouteType route_types = 3;
+  repeated GrayRouteRule gray_rules = 4;
+
+  // route_type = ROUTE_TYPE_C_HASH: Node replica 因子，默认100, max: ROUTE_C_HASH_MAX_REPLICA
+  uint32 route_c_hash_replica = 6;
+  // route_type = ROUTE_TYPE_C_HASH/ROUTE_TYPE_MOD_HASH/ROUTE_TYPE_MASTER 时，指定Shard选路的策略。
+  // shard_route_policy 仅对 P2G 单播有效
+  ShardRoutePolicy shard_route_policy = 7;
+  // route_type = ROUTE_TYPE_MASTER，全局组信息
+  string master = 8;
+
+  // enable stateful group member recv msg when version mismatch;
+  // if false, messages sent to this group will be blocked at senders' agent when doing 2PC
+  bool allow_msg_wrong_version = 9;
+  // 静态配置shard master的map数组，Ns无需关注此项
+  map<uint32, string> shard_masters = 10;
+  // weight范围[0, 100], 无需强制指定.未指定时,默认weight=100
+  repeated ShardWeight shard_weights = 11;
+  // 有状态组变更协调相关配置，具体含义参考全局配置
+  google.protobuf.Int32Value group_trans_level = 12;
+  google.protobuf.Int32Value group_trans_aggregate_ms = 13;
+  google.protobuf.Int32Value group_trans_aggregate_num = 14;
+  google.protobuf.Int32Value group_trans_block_msg_ms = 15;
+  // 支持通过别名配置Conf，alias和group_id不能同时配置。alias的示例，其中*表示全匹配：[1-3]aa[100-200, tt, xx]zz.*..
+  string alias = 16;
+  // 心跳超时时长，具体含义参考全局配置
+  google.protobuf.Int32Value max_agent_hb_timeout_sec = 17;
+};
+
+// 异构系统代理，与agent 同机部署的代理程序，可应用于遗留系统灰度升级、边缘网关代理等场景
+// tbusd_proxy, tbuspp_proxy, etc
+message HeterProxyConf {
+  // 如果需要与多种网络进行通讯, 则对应 proxy 需要使用type 加以区分
+  // 单一类型 proxy 不必设置
+  int32 type = 1;
+  // 遗留系统本地代理 busid (tbusd_proxy, tbuspp_proxy)
+  string busid = 2;
+  // 对应被代理本地服务busid 清单 (负载分配)
+  repeated string target_busid_spec = 3;
+};
+
+// 异构系统端点，当消息目标是这些端点时，通过 HeterProxy 进行转发，
+message HeterEndpointConf {
+  int32 type = 1;
+  string busid_spec = 2;
+};
+
+message AliasRule {
+  int32 level = 1;
+  string desc = 2;
+  repeated string alias = 3;
+  uint64 min_autogen_id = 4;
+  uint64 max_autogen_id = 5;
+};
+
+// 标识当前集群的domain_id，以及转发出口group
+message RouterConf {
+  string proxy_gid = 2;
+}
+
+// 静态配置一个服务集群(域)
+message DomainConf {
+  uint32 version = 1;
+  string busid_template = 2;  // default: 8.8.8.8
+  string gid_mask = 3;  // default: 0xFFFF0000, hex string, must be start with "0x"
+  repeated AgentConf agents = 4;
+  repeated EndpointConf endpoints = 5;
+  repeated GroupConf groups = 6;
+  // 代理配置（可用作遗留系统灰度升级、跨网络消息中转等）
+  repeated HeterProxyConf heter_proxies = 8;
+  repeated HeterEndpointConf heter_endpoints = 9;
+  repeated AliasRule alias_rules = 10; // 别名规则
+  RouterConf router = 11; // 跨域转发配置
+  repeated string pre_build_alias_group = 12 [deprecated = true];
+  // google.protobuf.BoolValue alias_keep_numeric = 13 [deprecated = true];
+  repeated string domain_alias_rules = 14; // 子域别名规则
+  string desc = 15; // 配置描述
+  // domain_id 扩展到 16 bits，默认情况下只支持 8 bits
+  bool use_16bits_domain_id = 16;
+};

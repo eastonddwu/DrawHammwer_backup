@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<!-- tconnd GCP模式沙箱配置：本机直连模式，RunMode=0(Tbus)，无Apollo鉴权，GCP层TotalNoAuth。
+     已在沙箱环境验证通过：tconnd能正常监听18801端口并完成GCP握手。
+     配套的GCIM共享内存需要先用同目录下的tbusmgr.xml + `tbusmgr -W` 创建，见README.md。 -->
+<tconnd __version="13">
+    <MaxFD>128</MaxFD>
+    <PDUList type="PDUList">
+        <Count>1</Count>
+        <PDUs type="PDU">
+            <Name>cs_tcp_pdu</Name>
+            <UpSize>65535</UpSize>
+            <LenParsertype>PDULENPARSERID_BY_GCP</LenParsertype>
+            <LenParser type="PDULenParser">
+                <GCPParser type="PDULenGCPParser">
+                    <!-- KeyMethod=2(SERVER协商密钥), EncMethod=3(AES加密) -->
+                    <KeyMethod>2</KeyMethod>
+                    <EncMethod>3</EncMethod>
+                    <!-- 0x2=TotalNoAuth，GCP层本身不要求真实票据/token，配合下面AuthInfo.ServiceMode=0
+                         (关闭Apollo远程鉴权)，构成"本机直连、无外部鉴权依赖"的沙箱验证模式 -->
+                    <EnableNoAuth>0x2</EnableNoAuth>
+                    <IsIDMappingOn>0</IsIDMappingOn>
+                    <UseCompress>0</UseCompress>
+                    <CompressLimit>1024</CompressLimit>
+                </GCPParser>
+            </LenParser>
+        </PDUs>
+    </PDUList>
+    <ListenerList type="ListenerList">
+        <Count>1</Count>
+        <Listeners type="Listener">
+            <Name>cs_tcp_lsn</Name>
+            <!-- 客户端(测试用test_gcp_client)连接的端口 -->
+            <Url>tcp://0.0.0.0:18801?reuse=1</Url>
+            <SendBuff>131072</SendBuff>
+            <RecvBuff>131072</RecvBuff>
+            <MaxIdle>0</MaxIdle>
+            <BackLog>128</BackLog>
+            <NoDelay>1</NoDelay>
+        </Listeners>
+    </ListenerList>
+    <SerializerList type="SerializerList">
+        <Serializers type="Serializer">
+            <Name>cs_tcp_sl</Name>
+            <!-- 直连模式：connsvr的busid，需要与run_sandbox.sh/connsvr启动参数中的svr_id一致，
+                 也需要在tbusmgr.xml的Channels.Address里声明过。
+                 地址格式必须是"N.0.0.0"（整数值写在第一段），不是"0.0.0.N"，
+                 原因同tbusmgr.xml里的注释：经典tconnapi_*接口内部转换busid为地址字符串时
+                 用的是int-in-first-octet写法，格式不一致会导致tbus_connect_by_str找不到通道。 -->
+            <Url>1.0.0.0</Url>
+        </Serializers>
+    </SerializerList>
+    <NetTrans type="NetTrans">
+        <Name>cs_tcp_net</Name>
+        <UseTimeStamp>0</UseTimeStamp>
+        <UseWaitQueue>0</UseWaitQueue>
+        <PDU>cs_tcp_pdu</PDU>
+        <Listener>cs_tcp_lsn</Listener>
+        <Serializer>cs_tcp_sl</Serializer>
+        <!-- RunMode=0(Tbus)：走经典TBUS共享内存转发到connsvr，与app_server现有TconndChannel
+             (基于tconnapi_*classic API)完全兼容，不需要tconnapi_tbus2.h这套新API -->
+        <RunMode>0</RunMode>
+    </NetTrans>
+    <AuthInfo>
+        <ApsAuthInfo>
+            <!-- ServiceMode=0：关闭Apollo远程鉴权服务，沙箱环境没有也不需要部署Apollo -->
+            <ServiceMode>0</ServiceMode>
+            <!-- 必须为0，与tbusmgr.xml的BussinessID、启动参数--business-id保持一致，
+                 否则connsvr侧tconnapi_init固定用的bussid=0会跟这里对不上，导致GCIM通道找不到 -->
+            <BusinessID>0</BusinessID>
+        </ApsAuthInfo>
+    </AuthInfo>
+</tconnd>

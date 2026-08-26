@@ -1,0 +1,5 @@
+<tcmcenter>
+    <AccessWhiteList>
+        <ipList>127.0.0.1 21.6.178.114</ipList>
+    </AccessWhiteList>
+</tcmcenter>

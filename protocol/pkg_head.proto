@@ -1,0 +1,18 @@
+// file name: pkg_head.proto
+// description: RPC包头，字段语义对齐原SimplePkgHeader（去掉magic，magic只在frame最外层前缀中使用）
+
+syntax = "proto3";
+
+package app.protocol;
+
+message PkgHead
+{
+    uint32 cmd = 1;
+    uint64 seq_id = 2;
+    uint64 gid = 3;
+    uint32 flag = 4;
+    int32 ret_code = 5;
+    uint32 src = 6;
+    uint32 dst = 7;
+    uint64 timeout = 8;
+}

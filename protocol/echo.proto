@@ -1,0 +1,33 @@
+// file name: echo.proto
+// description: echo_demo业务消息与服务定义，method上的METHOD_CMD option用于运行时反射注册cmd->handler
+
+syntax = "proto3";
+
+package echo_demo;
+
+import "rpc_options.proto";
+
+message EchoRequest
+{
+    string content = 1;
+}
+
+message EchoResponse
+{
+    string content = 1;
+}
+
+service EchoRpcService
+{
+    // 直接把请求内容原样返回，验证最基础的request->handler->response链路
+    rpc EchoSync(EchoRequest) returns (EchoResponse)
+    {
+        option (app.protocol.METHOD_CMD) = 1;
+    }
+
+    // 协程内再向对端发起一次EchoSync调用并等待结果，验证Pending/Awake+Yield/Resume全链路
+    rpc EchoCallPeer(EchoRequest) returns (EchoResponse)
+    {
+        option (app.protocol.METHOD_CMD) = 2;
+    }
+}

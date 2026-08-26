@@ -1,0 +1,117 @@
+// tbus2 proro define
+
+syntax = "proto3";
+package tbus2.defs;
+option go_package = "pkg/proto/tbus2_ns";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+    bool pretty_print_busid = 50001;
+};
+
+
+/*
+ errors:
+ < 0: local
+ [1000, 2000): endpoint
+ [2000, 3000): agent
+ [3000, 4000): namesvr
+ */
+enum Errors {
+    // common
+    ERR_NONE = 0;
+
+    // endpoint Vs agent
+    ERR_GENERIC = 1001;
+    ERR_UNEXPECTED = 1002;
+    ERR_WRONG_ARG = 1003;
+    ERR_WRONG_STATUS = 1004;
+    ERR_MOUNT_ENDPOINT_FAILED = 1005;
+    ERR_MOUNT_ENDPOINT_FULL = 1006;
+    ERR_CREATE_QUEUE_FAILED = 1007;
+    ERR_DUP_MOUNT = 1008;
+    ERR_AUTH_FAILED = 1009;
+    ERR_TIMEOUT = 1010;
+    ERR_NOT_FOUND = 1011;
+    ERR_SCHED_ENDPOINT_FAIL = 1012;
+    ERR_WRONG_API_VERSION = 1013;
+    ERR_OVER_FREQ_LIMIT = 1014;
+    ERR_WRONG_AGENT_VERSION = 1015;
+    ERR_WRONG_NS_VERSION = 1016;
+
+    // agent Vs agent
+    MESH_ERR_GENERIC = 2001;
+    MESH_ERR_AGENT_NOT_FOUND = 2003;
+    MESH_ERR_DUP_CONN = 2004;
+    MESH_ERR_WRONG_ARG = 2005;
+    MESH_ERR_BUSID_NOT_MOUNT = 2006;
+
+    // ns Vs agent & ns VS ns
+    NS_ERR_FAIL = 3000;
+    NS_ERR_BUSY = 3001;
+    NS_ERR_WRONG_SESS = 3002;
+    NS_ERR_WRONG_ARG = 3003;
+    NS_ERR_NOT_FOUND = 3004;
+    NS_ERR_DUP_REG = 3005;
+    NS_ERR_GENID_FAIL = 3006;
+    NS_ERR_GROUP_TRANS_DENY = 3007;
+    NS_ERR_NOT_LEADER = 3008;
+    NS_ERR_GROUP_OWNER_FAIL = 3009;
+    NS_ERR_GROUP_UNSUB_DENY = 3010;
+    NS_ERR_OP_DB_FAILED = 3011;
+    NS_ERR_WRONG_EP_OWNER = 3012;
+    NS_ERR_UNAUTHORIZED = 3013;
+    NS_ERR_OP_DENIED = 3014;
+    NS_ERR_OP_CANCEL = 3015;
+    NS_ERR_DB_WRONG_VERSION = 3016;
+    NS_ERR_NS_CLUSTER_NOT_READY = 3017;
+    NS_ERR_GEN_ALIAS_BUSID_FAIL = 3018;
+    NS_ERR_ALIAS_ILLEGAL = 3019;
+    NS_ERR_WRONG_GROUP_ID = 3020;
+    NS_ERR_WRONG_NS = 3021;
+    NS_ERR_REQUIRE_PAYLOAD_FAIL = 3022;
+    NS_ERR_IN_PROGRESS = 3023;
+    NS_ERR_REQUEST_CONFLICT = 3024;
+    NS_ERR_GROUP_TRANS_FAIL = 3025;
+
+    // ns VS ns
+    NS_ERR_FORWARD_MSG_FAIL = 4001;
+    NS_ERR_CACHE_AVAILABLE = 4002;
+};
+
+enum GroupTransAction {
+    GROUP_TRANS_ACTION_NULL = 0;
+    GROUP_TRANS_ACTION_PREPARE = 1;
+    GROUP_TRANS_ACTION_COMMIT = 2;
+    GROUP_TRANS_ACTION_ABORT = 3;
+    GROUP_TRANS_ACTION_BLOCK = 4;
+};
+
+enum GroupTransState {
+    GROUP_TRANS_COMPATIBLE = 0;
+    GROUP_TRANS_INIT = 1;
+    GROUP_TRANS_PREPARE_DOING = 2;
+    GROUP_TRANS_REQUIRE_BLOCK = 3;
+    GROUP_TRANS_PREPARE_BLOCKING = 4;
+    GROUP_TRANS_REQUIRE_COMMIT = 5;
+    GROUP_TRANS_REQUIRE_ABORT = 6;
+    GROUP_TRANS_END = 7;
+};
+
+message OTLPConf {
+    message FilterRule {
+      string tag_name = 1;
+      string tag_regex = 2;
+    };
+    message Filter {
+      string expr = 1;
+      repeated FilterRule rules = 2;
+      uint32 sampler_rate = 3;
+      string desc = 4;
+    };
+    string server_url = 1;
+    string server_token = 2;
+    repeated Filter filters = 3;
+    bool disabled = 4;
+};

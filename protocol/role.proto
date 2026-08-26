@@ -1,0 +1,54 @@
+// file name: role.proto
+// description: rolesvr业务消息与服务定义，method上的METHOD_CMD option用于运行时反射注册cmd->handler
+//              Login流程由connsvr转发到rolesvr，rolesvr再查询/创建dbproxy中的角色数据
+
+syntax = "proto3";
+
+package rolesvr;
+
+import "rpc_options.proto";
+
+message LoginReq
+{
+    uint64 gid = 1;          // 玩家ID（gid=gopenid，高32位=0）
+    uint64 gopenid = 2;      // 平台openid（从tconnd session提取或客户端上报）
+    uint32 session_id = 3;   // connsvr侧session_id（用于日志追踪和后续踢人）
+}
+
+message LoginResp
+{
+    uint64 gid = 1;          // 玩家ID
+    bool is_new = 2;         // 是否新玩家
+    uint32 role_type = 3;    // 角色类型
+    string user_name = 4;    // 用户名称
+    uint64 points = 5;       // 用户积分
+}
+
+message SetUserInfoReq
+{
+    uint64 gid = 1;          // 玩家ID
+    string user_name = 2;    // 用户名称
+    uint32 role_type = 3;    // 角色类型
+}
+
+message SetUserInfoResp
+{
+    uint64 gid = 1;
+    string user_name = 2;
+    uint32 role_type = 3;
+    int32 ret_code = 4;      // 0=成功
+}
+
+service RoleRpcService
+{
+    // connsvr收到客户端登录请求后，转发到rolesvr进行角色数据查询/创建
+    rpc Login(LoginReq) returns (LoginResp)
+    {
+        option (app.protocol.METHOD_CMD) = 1;
+    }
+    // 新用户注册：客户端填写用户信息，更新user_info并清除is_new标记
+    rpc SetUserInfo(SetUserInfoReq) returns (SetUserInfoResp)
+    {
+        option (app.protocol.METHOD_CMD) = 2;
+    }
+}

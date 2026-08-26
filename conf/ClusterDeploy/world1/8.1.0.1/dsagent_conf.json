@@ -1,0 +1,11 @@
+{
+    "svr_id": 134283265,
+    "tbus2_agent_url": "tcp://127.0.0.1:8001",
+    "ds_listen_port": 19000,
+    "ds_port_start": 20000,
+    "ds_port_end": 20099,
+    "ds_client_ip": "43.138.236.226",
+    "ds_exec_path": "/root/app/DrawHammer_DS/DrawHammer/Binaries/Linux/DrawHammerServer",
+    "ds_type": "ue_ds",
+    "ds_map": "/Game/DrawHammer/Map/LivingRoom/Lvl_LivingRoom_BattleMap"
+}

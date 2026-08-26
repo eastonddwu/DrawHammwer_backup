@@ -1,0 +1,26 @@
+<!--
+  注意: 本文件仅作参考/文档用途，TCM 实际加载的是
+  3rdparty/init_env/apps/tcm/cfg/tcmcenter.xml（由同目录下的 tcmcenter.xml.tmpl
+  在每次 `./start.sh start` 时动态渲染生成，见 start.sh 的 render_tcm_configs()）。
+  本文件未被任何脚本读取，下方路径仅为示意，__APP_ROOT__ 代表 app_server 实际
+  所在的绝对路径（由 start.sh 中 APP_ROOT 动态计算，不做硬编码）。
+  两份文件的 CreateCfgScriptFile/ConfigBaseDir 取值历史上不同（.py+cfg vs
+  .sh+conf），如需启用本文件请先确认与当前 3rdparty 版本的差异。
+-->
+<tcmcenter
+    UseAutoStart="1"
+    CenterdAddr="0.0.2.1"
+    TconndAddr="0.0.3.1"
+    BussinessID="0"
+    AddrTemple="function:8.world:8.zone:4.instance:12"
+    OpenCreateCfgByScript="1"
+    CreateCfgScriptFile="__APP_ROOT__/server/genconf/tcm_cfg/gen_app_conf.py"
+    ConfigBaseDir="__APP_ROOT__/cfg"
+    MsgRoundTime="20"
+    HostConfFile="__APP_ROOT__/cfg/host.xml"
+    ProcConfFile="__APP_ROOT__/cfg/proc.xml"
+    ProcDeployFile="__APP_ROOT__/cfg/deploy.xml"
+    BusRelationFile="__APP_ROOT__/cfg/bus_relation.xml"
+    AccessWhiteListFile="__APP_ROOT__/cfg/access_whitelist.xml"
+    TappPidFileDir="__APP_ROOT__/pid" >
+</tcmcenter>

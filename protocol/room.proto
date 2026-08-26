@@ -1,0 +1,674 @@
+// file name: room.proto
+// description: roomsvr业务消息与服务定义，管理房间创建/加入/离开/战斗及DS分配协调
+
+syntax = "proto3";
+
+package roomsvr;
+
+import "rpc_options.proto";
+
+// ========== 房间状态枚举 ==========
+// WAITING=0: 等待玩家加入（创建后初始状态）
+// DS_CREATING=1: 正在分配DS
+// DS_READY=2: DS已就绪，玩家可连接
+// DESTROYED=3: 房间已销毁
+// IN_BATTLE=4: 战斗进行中
+// 状态5已废弃：选人前置到WAITING，Start后直接进入DS_CREATING
+
+// ========== 房间操作请求/响应（connsvr→roomsvr）==========
+
+message CreateRoomReq
+{
+    uint64 gid = 1;
+    string room_name = 2;
+    uint32 max_players = 3;
+    uint32 map_id = 4;  // 0/缺省由后台使用101
+    string display_name = 5;  // 创建者登录昵称
+}
+
+message CreateRoomResp
+{
+    int32 ret_code = 1;
+    uint64 room_id = 2;
+}
+
+message QueryRoomListReq
+{
+}
+
+message QueryRoomListResp
+{
+    int32 ret_code = 1;
+    repeated RoomBriefInfo rooms = 2;
+}
+
+message QueryPlayerRoomStateReq
+{
+    uint64 gid = 1;
+}
+
+message QueryPlayerRoomStateResp
+{
+    int32 ret_code = 1;
+    bool in_room = 2;
+    uint64 room_id = 3;
+    bool in_battle = 4;
+}
+
+message JoinRoomReq
+{
+    uint64 gid     = 1;
+    uint64 room_id = 2;
+    string display_name = 3;  // 加入者登录昵称
+}
+
+message JoinRoomResp
+{
+    int32  ret_code = 1;
+}
+
+message LeaveRoomReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+}
+
+message LeaveRoomResp
+{
+    int32 ret_code = 1;
+    bool room_destroyed = 2;
+    uint64 new_host_gid = 3;  // 房主转移后的新gid（0=无变化或房间已销毁）
+}
+
+message SetReadyReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+    bool b_ready = 3;
+}
+
+message SetReadyResp
+{
+    int32 ret_code = 1;
+}
+
+message StartBattleReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+}
+
+message StartBattleResp
+{
+    int32 ret_code = 1;
+}
+
+// 局内选角（connsvr→roomsvr），仅WAITING允许；已准备房主仍可调整角色
+message RoomSetRoleReq
+{
+    uint64 gid              = 1;
+    uint64 room_id          = 2;
+    uint32 battle_role_type = 3;  // Catalog ID；所有非零值合法，0仅作服务端异常兜底
+}
+
+message RoomSetRoleResp
+{
+    int32 ret_code = 1;
+}
+
+message RoomSetMapReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+    uint32 map_id = 3;
+}
+
+message RoomSetMapResp
+{
+    int32 ret_code = 1;
+}
+
+// 房间快捷表情（connsvr→roomsvr）：仅WAITING允许，emote_id必须1~6，同一gid 2秒冷却（按上次成功起算）
+message RoomSendEmoteReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;  // 0=由roomsvr按gid自查
+    uint32 emote_id = 3;
+}
+
+message RoomSendEmoteResp
+{
+    int32 ret_code = 1;
+}
+
+message AddBotReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+}
+
+message AddBotResp
+{
+    int32 ret_code = 1;
+    string bot_id = 2;
+    uint32 slot_index = 3;
+}
+
+message RemoveBotReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+    string bot_id = 3;
+    uint32 slot_index = 4;
+}
+
+message RemoveBotResp
+{
+    int32 ret_code = 1;
+}
+
+message RenameRoomReq
+{
+    uint64 gid = 1;
+    uint64 room_id = 2;
+    string new_name = 3;
+}
+
+message RenameRoomResp
+{
+    int32 ret_code = 1;
+}
+
+// 玩家改昵称后同步到所在房间（connsvr→roomsvr）；不在房间时静默成功。
+// 房间名不跟着改，只刷成员display_name与（其为房主时的）host_display_name。
+message UpdateMemberNameReq
+{
+    uint64 gid = 1;
+    string display_name = 2;  // 已过8字闸门的昵称
+}
+
+message UpdateMemberNameResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== DS连接信息 ==========
+
+message DSConnectInfo
+{
+    string ip = 1;
+    uint32 port = 2;
+    uint64 token = 3;         // 连接令牌，DS校验用（每人独立）
+}
+
+// ========== 玩家认证信息 ==========
+
+message PlayerAuthInfo
+{
+    uint64 gid = 1;
+    uint64 token = 2;         // 每人独立随机token
+}
+
+// ========== 内部RPC：roomsvr <-> dscenter ==========
+
+message AllocDsaReq
+{
+    uint64 room_id = 1;
+}
+
+message AllocDsaResp
+{
+    int32 ret_code = 1;
+    uint32 dsa_svr_id = 2;    // 分配到的dsagent的busid
+}
+
+// ========== 内部RPC：roomsvr <-> dsagent ==========
+
+// 初始玩家（gid + 局内角色）
+message CreatePlayerInfo
+{
+    uint64 gid              = 1;
+    uint32 battle_role_type = 2;  // Start时从房间成员快照固化的局内角色
+    string display_name     = 3;  // 房间内登录昵称，供DS查不到库时兜底（游客不落库）
+}
+
+message CreateBotInfo
+{
+    string bot_id           = 1;
+    uint32 battle_role_type = 2;
+}
+
+message CreateGameReq
+{
+    uint64 room_id = 1;
+    uint32 ds_port = 2;                    // 请求DS监听端口（0=自动分配）
+    uint32 map_id = 3;                     // 房间当前地图
+    repeated CreatePlayerInfo players = 4; // 仅真人
+    repeated CreateBotInfo bots = 5;       // 仅Bot
+    uint64 battle_generation = 6;          // 房间内单调递增的开战代次，隔离迟到回调
+}
+
+message CreateGameResp
+{
+    int32 ret_code = 1;
+    uint32 dsa_svr_id = 2;
+    DSConnectInfo ds_conn_info = 3;
+    repeated PlayerAuthInfo player_auth_list = 4; // 每人独立token
+}
+
+message DestroyDsReq
+{
+    uint64 room_id = 1;
+    uint32 reason = 2;
+    uint64 battle_generation = 3; // 必须非0且匹配当前代次
+}
+
+message DestroyDsResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：dsagent -> roomsvr（DS就绪通知）==========
+
+message NotifyDsStartedReq
+{
+    uint64 room_id = 1;
+    DSConnectInfo ds_conn_info = 2;
+    repeated PlayerAuthInfo player_auth_list = 3; // 每人独立token
+    uint64 battle_generation = 4;                 // 必须匹配当前开战代次
+}
+
+message NotifyDsStartedResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：dsagent -> roomsvr（DS心跳超时通知）==========
+
+message NotifyDsTimeoutReq
+{
+    uint64 room_id = 1;
+    uint32 pid = 2;
+    uint64 battle_generation = 3; // 必须匹配当前开战代次
+}
+
+message NotifyDsTimeoutResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：dsagent -> dscenter（负载上报）==========
+
+message DsaReportLoadReq
+{
+    uint32 dsa_svr_id = 1;
+    uint32 ds_count = 2;       // 运行中DS数量
+    uint32 max_ds_count = 3;   // 最大DS容量
+}
+
+message DsaReportLoadResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：dsagent DS心跳 ==========
+
+message DsHeartBeatReq
+{
+    uint64 room_id = 1;
+    uint32 pid = 2;
+}
+
+message DsHeartBeatResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：roomsvr -> connsvr（房间推送）==========
+
+message RoomMemberInfo
+{
+    uint64 gid              = 1;  // 真人gid；Bot为0
+    int64  join_timestamp   = 2;
+    bool   is_ready         = 3;
+    uint32 battle_role_type = 4;  // 本局选型；真人Join时默认为1，Waiting可改选
+    bool   b_is_bot         = 5;
+    string bot_id           = 6;
+    uint32 slot_index       = 7;  // 固定座位，范围1..max_players
+    string display_name     = 8;  // 真人登录昵称；人机可空
+}
+
+message PushRoomDetailNtf
+{
+    uint64 room_id                 = 1;
+    string room_name               = 2;
+    uint64 host_gid                = 3;
+    int32  max_players             = 4;
+    repeated RoomMemberInfo members = 5;
+    bool   in_battle               = 6;
+    string battle_server_address   = 7;
+    repeated uint64 target_gids    = 8;  // 推送目标gid列表
+    MatchSummary last_match        = 9;  // 上一场战绩
+    uint32 map_id                  = 10; // 当前房间地图
+}
+
+message PushRoomDetailNtfResp
+{
+    int32 ret_code = 1;
+}
+
+message RoomBriefInfo
+{
+    uint64 room_id         = 1;
+    string room_name       = 2;
+    uint64 host_gid        = 3;
+    int32  current_players = 4;
+    int32  max_players     = 5;
+    bool   in_battle       = 6;
+    bool   has_last_match  = 7;  // 是否有战绩可查看
+    uint32 map_id          = 8;  // 当前房间地图
+    string host_display_name = 9;  // 当前房主登录昵称；与RoomMemberInfo.display_name同源，查不到时为空
+}
+
+message PushRoomListNtf
+{
+    repeated RoomBriefInfo rooms = 1;
+}
+
+message PushRoomListNtfResp
+{
+    int32 ret_code = 1;
+}
+
+message PushBattleReadyNtf
+{
+    uint64 room_id        = 1;
+    string server_address = 2;  // "IP:Port"
+    uint64 token          = 3;  // DS认证token
+    string battle_id      = 4;
+    repeated uint64 target_gids = 5; // 推送目标gid列表
+}
+
+message PushBattleReadyNtfResp
+{
+    int32 ret_code = 1;
+}
+
+message PushRoomKickedNtf
+{
+    uint64 room_id            = 1;
+    string reason             = 2;
+    repeated uint64 target_gids = 3; // 推送目标gid列表
+}
+
+message PushRoomKickedNtfResp
+{
+    int32 ret_code = 1;
+}
+
+// 旧版选人开始推送（兼容保留；新roomsvr不再发送）
+message PushRoomSelectingNtf
+{
+    uint64 room_id             = 1;
+    int64  select_end_unix_ms  = 2;  // 选人截止时间戳（毫秒）
+    uint32 select_duration_sec = 3;  // 本次选人总时长
+    repeated uint64 target_gids = 4; // 推送目标gid列表
+}
+
+message PushRoomSelectingNtfResp
+{
+    int32 ret_code = 1;
+}
+
+// 开战失败推送（Start后AllocDsa/CreateGame失败，roomsvr→connsvr→client）
+message PushRoomBattleFailedNtf
+{
+    uint64 room_id            = 1;
+    int32  reason             = 2;  // DS池耗尽/CreateGame失败等
+    string message            = 3;
+    repeated uint64 target_gids = 4;
+}
+
+message PushRoomBattleFailedNtfResp
+{
+    int32 ret_code = 1;
+}
+
+// 房间表情广播（roomsvr→connsvr→client cmd=2006）；瞬时事件，不进2001快照、不落库、不补发
+message PushRoomEmoteNtf
+{
+    uint64 room_id              = 1;
+    uint64 sender_gid           = 2;
+    uint32 emote_id             = 3;
+    repeated uint64 target_gids = 4;  // 房间内全部真人，含发送者
+}
+
+message PushRoomEmoteNtfResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== 内部RPC：roomsvr -> dsagent（设置DS认证信息）==========
+
+message SetDsAuthReq
+{
+    uint64 room_id = 1;
+    repeated PlayerAuthInfo player_auth_list = 2;
+}
+
+message SetDsAuthResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== dsagent -> mock_ds（认证信息推送）==========
+
+message DsAuthNtf
+{
+    uint64 room_id = 1;
+    repeated PlayerAuthInfo player_auth_list = 2;  // 完整列表，替换式更新
+}
+
+message DsAuthNtfResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== DS结算（DS→dsagent→roomsvr）==========
+
+message FightPlayerInfo
+{
+    uint64 gid                = 1;
+    uint32 kills              = 2;
+    uint32 deaths             = 3;
+    uint32 rank               = 4;
+    string display_name       = 5;
+    uint32 result             = 6;  // 0=存活 1=脱出 2=死亡 3=退出
+    bool was_connected_at_end = 7;
+    bool b_is_bot             = 8;  // true=人机，gid必须为0
+    string bot_id             = 9;  // 人机必填，与房间成员bot_id一致
+}
+
+message RoomDsPlayerSettleReq
+{
+    uint64 room_id = 1;
+    FightPlayerInfo player_info = 2;
+    uint64 battle_generation = 3; // 开战代次，隔离迟到结算包
+}
+
+message RoomDsPlayerSettleResp
+{
+    int32 ret_code = 1;
+    uint64 gid = 2;
+}
+
+message RoomDsGameFinishReq
+{
+    uint64 room_id = 1;
+    uint32 duration_sec = 2;
+    uint32 end_reason = 3;  // 0=LastManStanding 1=TimeOut 2=AllQuit 3=AllQuit
+    uint64 battle_generation = 4; // 开战代次，隔离迟到结束包
+}
+
+message RoomDsGameFinishResp
+{
+    int32 ret_code = 1;
+}
+
+// ========== MatchSummary（roomsvr→connsvr推送战绩）==========
+
+message MatchPlayer
+{
+    uint64 gid              = 1;
+    string display_name     = 2;
+    int32  kills            = 3;
+    int32  deaths           = 4;
+    int32  rank             = 5;
+    uint32 battle_role_type = 6;  // 本局固化的局内角色
+    bool   b_is_bot         = 7;
+    string bot_id           = 8;
+}
+
+message MatchSummary
+{
+    uint32 duration_sec    = 1;
+    uint32 end_reason      = 2;
+    repeated MatchPlayer players = 3;
+}
+
+// ========== DS查询玩家信息（DS→dsagent→dbproxy）==========
+
+message DsGetPlayerInfoReq
+{
+    uint64 room_id = 1;           // optional, logging only
+    repeated uint64 gid_list = 2; // 要查询的gid列表（1~N个）
+}
+
+message PlayerBriefInfo
+{
+    uint64 gid          = 1;
+    string display_name = 2;  // tcaplus user_name 字段
+    uint32 role_type    = 3;
+    uint64 points       = 4;
+    int32  ret_code     = 5;  // 0=成功, -1=查不到/dbproxy不可达
+}
+
+message DsGetPlayerInfoResp
+{
+    int32 ret_code = 1;                    // 0=至少部分成功, -1=全部失败, -2=gid_list超限
+    repeated PlayerBriefInfo player_list = 2;
+}
+
+// ========== 服务定义 ==========
+
+service RoomRpcService
+{
+    // 房间操作（connsvr→roomsvr）
+    rpc CreateRoom(CreateRoomReq) returns (CreateRoomResp)
+    {
+        option (app.protocol.METHOD_CMD) = 9;
+    }
+    rpc JoinRoom(JoinRoomReq) returns (JoinRoomResp)
+    {
+        option (app.protocol.METHOD_CMD) = 15;
+    }
+    rpc LeaveRoom(LeaveRoomReq) returns (LeaveRoomResp)
+    {
+        option (app.protocol.METHOD_CMD) = 5;
+    }
+    rpc SetReady(SetReadyReq) returns (SetReadyResp)
+    {
+        option (app.protocol.METHOD_CMD) = 6;
+    }
+    rpc StartBattle(StartBattleReq) returns (StartBattleResp)
+    {
+        option (app.protocol.METHOD_CMD) = 7;
+    }
+    rpc RoomSetRole(RoomSetRoleReq) returns (RoomSetRoleResp)
+    {
+        option (app.protocol.METHOD_CMD) = 12;
+    }
+    rpc RoomSetMap(RoomSetMapReq) returns (RoomSetMapResp)
+    {
+        option (app.protocol.METHOD_CMD) = 13;
+    }
+    rpc AddBot(AddBotReq) returns (AddBotResp)
+    {
+        option (app.protocol.METHOD_CMD) = 16;
+    }
+    rpc RemoveBot(RemoveBotReq) returns (RemoveBotResp)
+    {
+        option (app.protocol.METHOD_CMD) = 17;
+    }
+    rpc RenameRoom(RenameRoomReq) returns (RenameRoomResp)
+    {
+        option (app.protocol.METHOD_CMD) = 8;
+    }
+    rpc QueryRoomList(QueryRoomListReq) returns (QueryRoomListResp)
+    {
+        option (app.protocol.METHOD_CMD) = 14;
+    }
+    rpc QueryPlayerRoomState(QueryPlayerRoomStateReq) returns (QueryPlayerRoomStateResp)
+    {
+        option (app.protocol.METHOD_CMD) = 18;
+    }
+    rpc UpdateMemberName(UpdateMemberNameReq) returns (UpdateMemberNameResp)
+    {
+        option (app.protocol.METHOD_CMD) = 19;
+    }
+    rpc RoomSendEmote(RoomSendEmoteReq) returns (RoomSendEmoteResp)
+    {
+        option (app.protocol.METHOD_CMD) = 20;
+    }
+
+    // 内部：dsagent通知roomsvr DS已就绪
+    rpc NotifyDsStarted(NotifyDsStartedReq) returns (NotifyDsStartedResp)
+    {
+        option (app.protocol.METHOD_CMD) = 10;
+    }
+    // 内部：dsagent心跳超时 -> 销毁房间
+    rpc NotifyDsTimeout(NotifyDsTimeoutReq) returns (NotifyDsTimeoutResp)
+    {
+        option (app.protocol.METHOD_CMD) = 11;
+    }
+
+    // 内部：roomsvr推送房间状态到connsvr
+    rpc PushRoomDetail(PushRoomDetailNtf) returns (PushRoomDetailNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 21;
+    }
+    rpc PushRoomList(PushRoomListNtf) returns (PushRoomListNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 22;
+    }
+    rpc PushBattleReady(PushBattleReadyNtf) returns (PushBattleReadyNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 23;
+    }
+    rpc PushRoomKicked(PushRoomKickedNtf) returns (PushRoomKickedNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 24;
+    }
+    rpc PushRoomSelecting(PushRoomSelectingNtf) returns (PushRoomSelectingNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 25;
+    }
+    rpc PushRoomBattleFailed(PushRoomBattleFailedNtf) returns (PushRoomBattleFailedNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 26;
+    }
+    rpc PushRoomEmote(PushRoomEmoteNtf) returns (PushRoomEmoteNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 27;
+    }
+
+    // DS结算（DS→dsagent→roomsvr）
+    rpc RoomDsPlayerSettle(RoomDsPlayerSettleReq) returns (RoomDsPlayerSettleResp)
+    {
+        option (app.protocol.METHOD_CMD) = 31;
+    }
+    rpc RoomDsGameFinish(RoomDsGameFinishReq) returns (RoomDsGameFinishResp)
+    {
+        option (app.protocol.METHOD_CMD) = 32;
+    }
+}

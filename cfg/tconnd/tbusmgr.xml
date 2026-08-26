@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="gbk" standalone="yes" ?>
+<!-- tbusmgr通道声明文件：声明tconnd与connsvr之间的TBUS共享内存通道。
+     必须在启动tconnd之前用 tbusmgr -W -C tbusmgr.xml 把这份声明写入GCIM共享内存，
+     否则tconnd启动时会反复报 "shared-memory<KEY> not exists"（tconnd只挂载GCIM，不创建它）。
+     GCIMShmKey要与tconnd的bus-key参数、connsvr的shm_key参数保持一致。 -->
+<TbusGCIM>
+  <!-- 必须为0：connsvr侧调用的是经典tconnapi_init(shm_key)，没有设置business id的参数，
+       内部固定使用bussid=0；这里如果填非0值，会导致tbusmgr/tconnd算出的GCIM内部地址
+       跟connsvr侧不一致，双方各自"成功"挂载/写入，但实际找不到对方的通道 -->
+  <BussinessID>0</BussinessID>
+  <AddrTemplet>8.8.8.8</AddrTemplet>
+  <GCIMShmKey>16880</GCIMShmKey>
+
+  <Channels>
+    <Priority>8</Priority>
+    <!-- 两端busid：tconnd自己的地址 + connsvr的地址(=connsvr main.cpp的svr_id参数)。
+         地址格式必须是"N.0.0.0"（整数值写在第一段），不是"0.0.0.N"：
+         经典tconnapi_*接口内部把整数busid转换成地址字符串时用的是int-in-first-octet的写法，
+         如果GCIM里注册的通道地址跟这个转换结果不一致，connsvr侧tconnapi_create会bind失败(ret(-3))。 -->
+    <Address>100.0.0.0</Address>
+    <Address>1.0.0.0</Address>
+    <SendSize>102400</SendSize>
+    <RecvSize>204800</RecvSize>
+    <Desc>tconnd-connsvr channel</Desc>
+  </Channels>
+</TbusGCIM>

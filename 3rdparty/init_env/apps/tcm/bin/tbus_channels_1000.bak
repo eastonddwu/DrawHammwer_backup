@@ -1,0 +1,34 @@
+
+========================
+Shm version:	1
+Shm key:	1000
+Shm size:	192408
+DataAlign:	8  
+AlignLevel:3
+Routes max count:	3000
+Routes used count:	2
+addr segments num: 4  content:
+255(8/24).255(8/16).255(8/8).255(8/0).
+
+Channel 1 information:
+	Status:0x1 -- enable
+	Priority -- 8
+	ShmID -- 32811
+	Address -- 0.0.1.1
+	Address -- 0.0.3.1
+	[0.0.1.1] RecvQueueSize -- 20480000
+	[0.0.1.1] SendQueueSize -- 20480000
+	CreateTime -- Tue Aug 25 20:23:03 2026
+	DisableTime -- N/A
+	WAN QoS Flag -- 0x0
+Channel 2 information:
+	Status:0x1 -- enable
+	Priority -- 8
+	ShmID -- 32814
+	Address -- 0.0.1.1
+	Address -- 0.0.2.1
+	[0.0.1.1] RecvQueueSize -- 20480000
+	[0.0.1.1] SendQueueSize -- 20480000
+	CreateTime -- Tue Aug 25 20:23:03 2026
+	DisableTime -- N/A
+	WAN QoS Flag -- 0x0

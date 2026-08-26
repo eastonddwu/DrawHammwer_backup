@@ -1,0 +1,59 @@
+// file name: dbproxy.proto
+// description: dbproxy RPC协议定义，CommonGetData/CommonSetData通用操作
+
+syntax = "proto3";
+
+package app.protocol;
+
+import "rpc_options.proto";
+
+service DBProxyService
+{
+    // 通用读取
+    rpc CommonGetData(CommonGetDataReq) returns (CommonGetDataResp)
+    {
+        option (app.protocol.METHOD_CMD) = 5001;
+    }
+
+    // 通用写入（REPLACE语义：不存在则插入，存在则更新）
+    rpc CommonSetData(CommonSetDataReq) returns (CommonSetDataResp)
+    {
+        option (app.protocol.METHOD_CMD) = 5002;
+    }
+}
+
+// 通用Key，支持数值型和字符串型主键
+message CommonKey
+{
+    uint64 first = 1;       // 数值主键1
+    uint32 second = 2;     // 数值主键2
+    uint64 third = 3;      // 数值主键3
+    string string_key = 4; // 字符串主键（如uid）
+}
+
+message CommonGetDataReq
+{
+    CommonKey key = 1;
+    string table_name = 2; // 目标表名（如"login"、"user_info"）
+}
+
+message CommonGetDataResp
+{
+    CommonKey key = 1;
+    bytes data = 2;
+    int32 data_version = 3;
+    string table_name = 4;
+}
+
+message CommonSetDataReq
+{
+    CommonKey key = 1;
+    bytes data = 2;
+    int32 data_version = 3;
+    string table_name = 4; // 目标表名
+}
+
+message CommonSetDataResp
+{
+    int32 data_version = 1;
+}

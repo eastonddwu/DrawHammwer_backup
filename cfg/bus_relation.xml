@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<!--
+  bus_relation.xml — 进程间通信通道配置
+
+  重要说明:
+  1. 这里定义的是 tbus 共享内存通道（用于 TCM 管理的通信层）
+  2. app_server 的业务服务间通信（connsvr↔rolesvr↔dbproxy）使用 tbuspp2（tbus2 agent），
+     不走这里的 bus_relation，所以这里只列最小必要通道。
+  3. GCP 业务 tconnd 的通道（tbusmgr.xml 里定义的 connsvr↔tconnd 通道，
+     地址格式 "N.0.0.0"）由 tconnd_sandbox 单独管理，与本文件无关。
+-->
+<tcmcenter>
+    <!-- GCIMShmKey=1000：TCM 内部组件（tcmcenter/tconnd/tcenterd）通信用的共享内存 key -->
+    <!-- 注意与业务 tconnd sandbox 的 shm_key(0x1688=5768) 区分开，互不干扰 -->
+    <TbusConf BussinessID="0" GCIMShmKey="1000" GRMShmKey="2000">
+        <!-- 当前 app_server 业务服务间通过 tbuspp2 通信，暂无需 tbus 共享内存通道 -->
+        <!-- 若将来引入 cluster_agent 或其他需要 tbus 通道的组件，在此添加 Channel 条目 -->
+    </TbusConf>
+</tcmcenter>

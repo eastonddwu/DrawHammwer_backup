@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<tcmcenter>
+    <HostTab>
+        <Host Name="app_server_host" InnerIP="172.16.16.17"/>
+    </HostTab>
+</tcmcenter>

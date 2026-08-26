@@ -1,0 +1,43 @@
+// file name: dsagent.proto
+// description: dsagent服务定义，负责DS进程生命周期管理
+
+syntax = "proto3";
+
+package dsagent;
+
+import "rpc_options.proto";
+import "room.proto";
+
+service DsAgentRpcService
+{
+    // roomsvr请求创建一个DS游戏进程
+    rpc CreateGame(roomsvr.CreateGameReq) returns (roomsvr.CreateGameResp)
+    {
+        option (app.protocol.METHOD_CMD) = 1;
+    }
+    // roomsvr请求销毁DS进程
+    rpc DestroyDs(roomsvr.DestroyDsReq) returns (roomsvr.DestroyDsResp)
+    {
+        option (app.protocol.METHOD_CMD) = 2;
+    }
+    // DS进程心跳上报
+    rpc DsHeartBeat(roomsvr.DsHeartBeatReq) returns (roomsvr.DsHeartBeatResp)
+    {
+        option (app.protocol.METHOD_CMD) = 3;
+    }
+    // roomsvr设置/更新DS的玩家认证信息
+    rpc SetDsAuth(roomsvr.SetDsAuthReq) returns (roomsvr.SetDsAuthResp)
+    {
+        option (app.protocol.METHOD_CMD) = 4;
+    }
+    // dsagent推送认证信息到DS进程（通过TCP通道）
+    rpc DsAuthNtf(roomsvr.DsAuthNtf) returns (roomsvr.DsAuthNtfResp)
+    {
+        option (app.protocol.METHOD_CMD) = 5;
+    }
+    // DS查询玩家信息代理（DS→dsagent→dbproxy）
+    rpc DsGetPlayerInfo(roomsvr.DsGetPlayerInfoReq) returns (roomsvr.DsGetPlayerInfoResp)
+    {
+        option (app.protocol.METHOD_CMD) = 6;
+    }
+}

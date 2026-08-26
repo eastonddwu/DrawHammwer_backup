@@ -1,0 +1,142 @@
+<tcmcenter
+    CenterdAddr="0.0.2.1"
+    TconndAddr="0.0.3.1"
+    BussinessID="0"
+    AddrTemple="function:8.world:8.zone:4.instance:12"
+    OpenCreateCfgByScript="1"
+    CreateCfgScriptFile="/data/workspace/app_server/cfg/gen_app_conf.sh"
+    ConfigBaseDir="/data/workspace/app_server/conf"
+    MsgRoundTime="20"
+    
+    
+    
+    
+    
+    TappPidFileDir="/data/workspace/app_server/pid" >
+
+
+
+    <cluster WorkPath="/data/workspace/app" AutoTimeGap="10" OpTimeout="30" MsgRoundTime="6">
+        <world Isolated="1" OpTimeout="900" AutoTimeGap="20">
+            <zone Isolated="1" OpTimeout="99">
+            </zone>
+
+            <!-- dbproxy: 数据库代理，最先启动 (Seq=10) -->
+            <Proc FuncName="dbproxy" ProcName="dbproxy" FuncID="5"
+                  WorkPath="dbproxy_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="10"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dbproxy_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- dscenter: DS负载均衡中心 (Seq=15) -->
+            <Proc FuncName="dscenter" ProcName="dscenter" FuncID="7"
+                  WorkPath="dscenter_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="15"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dscenter_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- dsagent: DS进程管理 (Seq=16) -->
+            <Proc FuncName="dsagent" ProcName="dsagent" FuncID="8"
+                  WorkPath="dsagent_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="16"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dsagent_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- roomsvr: 房间服务 (Seq=18) -->
+            <Proc FuncName="roomsvr" ProcName="roomsvr" FuncID="6"
+                  WorkPath="roomsvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="18"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/roomsvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- rolesvr: 角色服务 (Seq=20) -->
+            <Proc FuncName="rolesvr" ProcName="rolesvr" FuncID="4"
+                  WorkPath="rolesvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="20"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/rolesvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- connsvr: 连接服务，最后启动 (Seq=30)，依赖 rolesvr/dbproxy 已在线 -->
+            <Proc FuncName="connsvr" ProcName="connsvr" FuncID="3"
+                  WorkPath="connsvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="30"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/connsvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+        </world>
+    </cluster>
+
+    <ProcGroup Name="dbproxy" Layer="world">
+        <Proc FuncName="dbproxy" />
+    </ProcGroup>
+
+    <ProcGroup Name="dscenter" Layer="world">
+        <Proc FuncName="dscenter" />
+    </ProcGroup>
+
+    <ProcGroup Name="dsagent" Layer="world">
+        <Proc FuncName="dsagent" />
+    </ProcGroup>
+
+    <ProcGroup Name="roomsvr" Layer="world">
+        <Proc FuncName="roomsvr" />
+    </ProcGroup>
+
+    <ProcGroup Name="rolesvr" Layer="world">
+        <Proc FuncName="rolesvr" />
+    </ProcGroup>
+
+    <ProcGroup Name="connsvr" Layer="world">
+        <Proc FuncName="connsvr" />
+    </ProcGroup>
+
+
+
+    <HostTab>
+        <Host Name="app_server_host" InnerIP="21.6.178.114"/>
+    </HostTab>
+
+
+    <ClusterDeploy>
+        <world ID="1" WorkPath="/data/workspace/app">
+            <DeloyGroup Group="dbproxy" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="dscenter" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="dsagent" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="roomsvr" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="rolesvr" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="connsvr" Host="app_server_host" InstID="1"/>
+        </world>
+    </ClusterDeploy>
+
+
+    <!-- GCIMShmKey=1000：TCM 内部组件（tcmcenter/tconnd/tcenterd）通信用的共享内存 key -->
+    <!-- 注意与业务 tconnd sandbox 的 shm_key(0x1688=5768) 区分开，互不干扰 -->
+    <TbusConf BussinessID="0" GCIMShmKey="1000" GRMShmKey="2000">
+        <!-- 当前 app_server 业务服务间通过 tbuspp2 通信，暂无需 tbus 共享内存通道 -->
+        <!-- 若将来引入 cluster_agent 或其他需要 tbus 通道的组件，在此添加 Channel 条目 -->
+    </TbusConf>
+
+
+    <AccessWhiteList>
+        <ipList>127.0.0.1 21.6.178.114</ipList>
+    </AccessWhiteList>
+
+</tcmcenter>

@@ -1,0 +1,5 @@
+{
+    "svr_id": 83951618,
+    "tbus2_agent_url": "tcp://127.0.0.1:8001",
+    "tcaplus_conf": "../conf/tcaplus.conf"
+}

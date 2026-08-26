@@ -1,0 +1,70 @@
+/idgen/context/0
+[{"head":10000,"tail":1000000}]
+/idgen/context/3.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/2.0.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/4.0.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/5.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/3.0.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/7.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/7.0.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/6.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/5.0.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/8.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/4.1.0.0
+[{"head":32767,"tail":65535}]
+/idgen/context/1.0.0.0
+[{"head":32767,"tail":65535}]
+/g/0/rev
+339
+/g/0/7.1.0.0
+{"id":117506048,"alias":"","owner":1,"version":3852606564,"minor_version":3785891988,"master":0,"group_conf":{"group_id":"7.1.0.0","desc":"dscenter world=1 (TCM deploy, busid=0x07010001/7.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/7.0.0.0
+{"id":117440512,"alias":"","owner":0,"version":1660064260,"minor_version":3837120720,"master":0,"group_conf":{"group_id":"7.0.0.0","desc":"dscenter group (dscenter busid = 0x07000000 | instance_id)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/8.1.0.0
+{"id":134283264,"alias":"","owner":1,"version":3538630923,"minor_version":3515578897,"master":0,"group_conf":{"group_id":"8.1.0.0","desc":"dsagent world=1 (TCM deploy, busid=0x08010001/8.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/5.1.0.0
+{"id":83951616,"alias":"","owner":1,"version":3793914513,"minor_version":2541216066,"master":0,"group_conf":{"group_id":"5.1.0.0","desc":"dbproxy world=1 (TCM deploy, busid=0x05010001/5.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/5.0.0.0
+{"id":83886080,"alias":"","owner":0,"version":4046937443,"minor_version":4136750600,"master":0,"group_conf":{"group_id":"5.0.0.0","desc":"dbproxy group (dbproxy busid = 0x05000000 | instance_id，即5.0.0.1/5.0.0.2/...)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/4.1.0.0
+{"id":67174400,"alias":"","owner":1,"version":151953578,"minor_version":3715607086,"master":0,"group_conf":{"group_id":"4.1.0.0","desc":"rolesvr world=1 (TCM deploy, busid=0x04010001/4.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/2.0.0.0
+{"id":33554432,"alias":"","owner":0,"version":3438571566,"minor_version":27438664,"master":0,"group_conf":{"group_id":"2.0.0.0","desc":"stateful group","route_types":[1,4],"gray_rules":[{"src_busid_spec":"1.0.0.2","hash_key_spec":"1000,1200-1210","dest_busid":"2.0.0.1"}],"route_c_hash_replica":100,"shard_weights":[{"shard_id":1,"weight":20},{"shard_id":2,"weight":40}]},"conf_version":1,"shard_masters":null,"conf_site":0}
+/g/0/1.0.0.0
+{"id":16777216,"alias":"","owner":0,"version":2728748017,"minor_version":3032625101,"master":0,"group_conf":{"group_id":"1.0.0.0","desc":"stateless group (echo_demo A/B 使用: busid = 0x01000000 | svr_id，即1.0.0.1/1.0.0.2；0.0.0.0是tbus2保留gid不可用，故落在此非零group下)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/3.0.0.0
+{"id":50331648,"alias":"","owner":0,"version":1603172423,"minor_version":1920835751,"master":0,"group_conf":{"group_id":"3.0.0.0","desc":"connsvr group (connsvr busid = 0x03000000 | instance_id，即3.0.0.1/3.0.0.2/...)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/4.0.0.0
+{"id":67108864,"alias":"","owner":0,"version":2721679856,"minor_version":1266011551,"master":0,"group_conf":{"group_id":"4.0.0.0","desc":"rolesvr group (rolesvr busid = 0x04000000 | instance_id，即4.0.0.1/4.0.0.2/...)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/6.1.0.0
+{"id":100728832,"alias":"","owner":1,"version":3980153496,"minor_version":1250796595,"master":0,"group_conf":{"group_id":"6.1.0.0","desc":"roomsvr world=1 (TCM deploy, busid=0x06010001/6.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/g/0/3.1.0.0
+{"id":50397184,"alias":"","owner":1,"version":3625540797,"minor_version":3627966306,"master":0,"group_conf":{"group_id":"3.1.0.0","desc":"connsvr world=1 (TCM deploy, busid=0x03010001/3.1.0.1)","route_types":[1],"route_c_hash_replica":100},"conf_version":1,"shard_masters":{},"conf_site":0}
+/alias/0/0/game102
+{"level":0,"name":"game102","id":102}
+/alias/0/0/game100
+{"level":0,"name":"game100","id":100}
+/alias/0/0/game101
+{"level":0,"name":"game101","id":101}
+/alias/0/1/taiyuan
+{"level":1,"name":"taiyuan","id":101}
+/alias/0/1/beijing
+{"level":1,"name":"beijing","id":102}
+/alias/0/1/gansu
+{"level":1,"name":"gansu","id":103}
+/alias/0/1/shanghai
+{"level":1,"name":"shanghai","id":100}
+/alias/0/2/ios
+{"level":2,"name":"ios","id":100}
+/alias/0/2/android
+{"level":2,"name":"android","id":101}

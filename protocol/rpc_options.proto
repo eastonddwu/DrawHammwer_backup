@@ -1,0 +1,16 @@
+// file name: rpc_options.proto
+// description: app_server自定义protobuf option扩展，仅保留METHOD_CMD一个字段
+//              (对齐ua_server rpc_options.proto的精简版，去掉CALL_TYPE/CTX_TYPE/TRANSPORT_TYPE等
+//               app_server只有一套PbService/PbContext/TRANSPORT_PB，不需要这些可配置字段)
+
+syntax = "proto3";
+
+package app.protocol;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MethodOptions
+{
+    // rpc方法对应的cmd
+    uint32 METHOD_CMD = 60001;
+}

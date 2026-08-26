@@ -1,0 +1,208 @@
+# "#" or "//" comment one line
+# 为简化配置，某些字段支持表达式求值，其格式分别如下：
+
+// 1. busid_spec: 描述一个busid 集合
+//    - 位置：endpoints/busid_spec, groups/gray_rules/src_busid_spec
+//    - 格式：
+//        - 1.0.0.1: 确定一个busid
+//        - 1.0.0.*: '*' 匹配一段busid [1, 255]
+//        - 1.0.0.[1-10,15]: 匹配一个范围内的 busid
+//        - a.b.c.d:
+//          - a, d range: [1, 255]
+//          - b, c range: [0, 255]
+// 2. hash_key_spec: 描述一个Hash key 值的集合
+//    - 位置：groups/gray_rules/hash_key_spec
+//    - 格式：
+//      - nnnn: set an hash key
+//      - a-b: hash_key >= a && hask_key <= b
+//      - a,b,c-d: a, b, c <= x <= d
+//  更多配置文件说明参见："docs/tbuspp2_basic_version_function_spec.pdf" 中关于配置的说明
+// 3. group_id: 支持通配形式
+//     - 位置：groups/group_id
+//     - 格式(基于busid_temp: 8.8.8.8, gid_mask: 0xFFFF0000)：
+//         - 1.0.0.0：确定一个group_id
+//         - 1.[1-10,15].0.0: 匹配一个范围内的group_id
+//         - 1.*.0.0: '*' 匹配本段所有group_id [0, 255]
+//         - a.b.c.d:
+//           - a, b range: [0, 255]
+//           - c, d range: [0, 0]
+//   更详细的配置说明参见：https://iwiki.woa.com/pages/viewpage.action?pageId=4006963285
+{
+  "version": 9,
+  // when system started, busid_template & gid_mask can not change
+  // "busid_template": "8.8.8.8",
+  // "gid_mask": "0xFFFF0000",
+  "agents": [
+    {
+      "agent_id": 1,
+      "desc": "test",
+      "mesh_url": ":10000",
+      "ad_mesh_url": "10.32.97.103:10000"
+    },
+    {
+      "agent_id": 2,
+      "desc": "test",
+      "mesh_url": ":10000",
+      "ad_mesh_url": "10.29.34.42:10000"
+    },
+    {
+      "agent_id": 3,
+      "desc": "test",
+      "mesh_url": "9.134.111.225:10003"
+    },
+    {
+      "agent_id": 4,
+      "desc": "test",
+      "mesh_url": "9.135.15.14:10001"
+    }
+  ],
+  "endpoints": [
+    {
+      "busid_spec": "1.0.0.[1-10]",
+      "desc": "",
+      "agent_id": 1,
+      "module_version": 0
+    },
+    {
+      "busid_spec": "1.[1-2].0.1",
+      "desc": "",
+      "agent_id": 1,
+      "module_version": 1
+    },
+    {
+      "busid_spec": "1.[3-4].0.1",
+      "desc": "",
+      "agent_id": 1,
+      "module_version": 2
+    },
+    {
+      "busid_spec": "1.[5-12].0.1",
+      "desc": "",
+      "agent_id": 1,
+      "module_version": 3
+    },
+    {
+      "busid_spec": "2.0.0.[1-10]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 1,
+      "lb_factor": 100
+    },
+    {
+      "busid_spec": "2.0.0.[11-20]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 2
+    },
+    {
+      "busid_spec": "3.0.0.[1-2]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 0,
+      "shard_id": 3
+    },
+    {
+      "busid_spec": "4.0.0.[1-2]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 0
+    },
+    {
+      "busid_spec": "5.0.0.[1-2]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 0,
+      "shard_id": 1
+    },
+    {
+      "busid_spec": "5.0.0.[3-4]",
+      "desc": "",
+      "agent_id": 2,
+      "module_version": 0,
+      "shard_id": 2
+    },
+    {
+      "busid_spec": "9.1.1.[1-10]",
+      "desc": "tconnd_demo net_mode",
+      "agent_id": 1,
+      "module_version": 0
+    }
+  ],
+  "groups": [
+    {
+      "group_id": "1.[1-4].0.0",
+      "desc": "",
+      // route_type: random, mod_hash, consist_hash, on_master (refer enum RouteType)
+      "route_types": [
+        1
+      ]
+    },
+    {
+      "group_id": "1.[4-7].0.0",
+      "desc": "",
+      // route_type: random, mod_hash, consist_hash, on_master (refer enum RouteType)
+      "route_types": [
+        3
+      ]
+    },
+    {
+      "group_id": "1.*.0.0",
+      "desc": "",
+      // route_type: random, mod_hash, consist_hash, on_master (refer enum RouteType)
+      "route_types": [
+        4
+      ]
+    },
+    {
+      "group_id": "1.0.0.0",
+      "desc": "",
+      // route_type: random, local, mod_hash, consist_hash, on_master (refer enum RouteType)
+      "route_types": [
+        "ROUTE_TYPE_RANDOM"
+      ]
+    },
+    {
+      "group_id": "2.0.0.0",
+      "desc": "",
+      "route_types": [
+        "ROUTE_TYPE_RANDOM"
+      ],
+      // "route_local_enable_failover": true,
+      // "master": "2.0.0.2",
+      "route_c_hash_replica": 100,
+      // 是否允许接收group version错误消息 (stateful group), default false
+      // "allow_msg_wrong_version": false,
+      "gray_rules": [
+        {
+          "src_busid_spec": "1.0.0.2",
+          "hash_key_spec": "1000,1200-1210",
+          "dest_busid": "2.0.0.1"
+        }
+      ]
+    },
+    {
+      "group_id": "3.0.0.0",
+      "route_types": [
+        "ROUTE_TYPE_M_HASH"
+      ],
+      // 基于shard选路的策略，GROUP_SHARDING_SAFE = 0;启用，若shard_id 不存在，则全组匹配
+      // GROUP_SHARDING_STRICT = 1; 严格匹配shard_id，不存在报错
+      // GROUP_SHARDING_OFF = 2; 取消shard_id匹配，默认全组匹配
+      "shard_route_policy": 0,
+      "allow_msg_wrong_version": true
+    },
+    {
+      "group_id": "4.0.0.0",
+      "route_types": [
+        "ROUTE_TYPE_C_HASH"
+      ]
+    },
+    {
+      "group_id": "5.0.0.0",
+      "master": "5.0.0.1",
+      "route_types": [
+        "ROUTE_TYPE_MASTER"
+      ]
+    }
+  ]
+}

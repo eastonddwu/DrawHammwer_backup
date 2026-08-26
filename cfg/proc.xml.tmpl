@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<!--
+  proc.xml.tmpl — app_server 进程类型定义模板
+  注意: 本文件是模板，__APP_DEPLOY_DIR__ 占位符会在每次 `./start.sh start` 时
+  由 render_tcm_configs()（见 start.sh）动态替换为当前 app_server 同级目录下
+  的 app 绝对路径，生成实际生效的 cfg/proc.xml（该生成文件不应手工编辑，
+  修改请编辑本 .tmpl 文件）。
+
+  FuncID 规则（GroupBase 高字节 = FuncID）:
+    FuncID=3  connsvr   busid=3.0.0.N  (0x03000000|N)
+    FuncID=4  rolesvr   busid=4.0.0.N  (0x04000000|N)
+    FuncID=5  dbproxy   busid=5.0.0.N  (0x05000000|N)
+    FuncID=6  roomsvr   busid=6.0.0.N  (0x06000000|N)
+    FuncID=7  dscenter  busid=7.0.0.N  (0x07000000|N)
+    FuncID=8  dsagent   busid=8.0.0.N  (0x08000000|N)
+  WorkPath 变量: $function=FuncID, $world=world_id, $zone=zone_id, $instance=inst_id
+-->
+<tcmcenter>
+    <cluster WorkPath="__APP_DEPLOY_DIR__" AutoTimeGap="10" OpTimeout="30" MsgRoundTime="6">
+        <world Isolated="1" OpTimeout="900" AutoTimeGap="20">
+            <zone Isolated="1" OpTimeout="99">
+            </zone>
+
+            <!-- dbproxy: 数据库代理，最先启动 (Seq=10) -->
+            <Proc FuncName="dbproxy" ProcName="dbproxy" FuncID="5"
+                  WorkPath="dbproxy_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="10"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dbproxy_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- dscenter: DS负载均衡中心 (Seq=15) -->
+            <Proc FuncName="dscenter" ProcName="dscenter" FuncID="7"
+                  WorkPath="dscenter_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="15"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dscenter_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- dsagent: DS进程管理 (Seq=16) -->
+            <Proc FuncName="dsagent" ProcName="dsagent" FuncID="8"
+                  WorkPath="dsagent_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="16"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/dsagent_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- roomsvr: 房间服务 (Seq=18) -->
+            <Proc FuncName="roomsvr" ProcName="roomsvr" FuncID="6"
+                  WorkPath="roomsvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="18"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/roomsvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- rolesvr: 角色服务 (Seq=20) -->
+            <Proc FuncName="rolesvr" ProcName="rolesvr" FuncID="4"
+                  WorkPath="rolesvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="20"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/rolesvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+            <!-- connsvr: 连接服务，最后启动 (Seq=30)，依赖 rolesvr/dbproxy 已在线 -->
+            <Proc FuncName="connsvr" ProcName="connsvr" FuncID="3"
+                  WorkPath="connsvr_$function.$world.$zone.$instance/bin"
+                  ConfigPath="../conf" Seq="30"
+                  Flag="auto|start|stop|restart|kill|reload|check|runshell"
+                  Agrs="--conf-file=../conf/connsvr_conf.json"
+                  RunShellCmd="../conf/runshell.sh"
+                  StartCheckCmd="../conf/check_proc.sh"
+                  StartCheckBeginTime="2" StartCheckEndTime="30"/>
+
+        </world>
+    </cluster>
+
+    <ProcGroup Name="dbproxy" Layer="world">
+        <Proc FuncName="dbproxy" />
+    </ProcGroup>
+
+    <ProcGroup Name="dscenter" Layer="world">
+        <Proc FuncName="dscenter" />
+    </ProcGroup>
+
+    <ProcGroup Name="dsagent" Layer="world">
+        <Proc FuncName="dsagent" />
+    </ProcGroup>
+
+    <ProcGroup Name="roomsvr" Layer="world">
+        <Proc FuncName="roomsvr" />
+    </ProcGroup>
+
+    <ProcGroup Name="rolesvr" Layer="world">
+        <Proc FuncName="rolesvr" />
+    </ProcGroup>
+
+    <ProcGroup Name="connsvr" Layer="world">
+        <Proc FuncName="connsvr" />
+    </ProcGroup>
+
+</tcmcenter>

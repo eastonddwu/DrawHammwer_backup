@@ -1,0 +1,23 @@
+// file name: dscenter.proto
+// description: dscenter服务定义，负责DSAgent负载均衡分配
+
+syntax = "proto3";
+
+package dscenter;
+
+import "rpc_options.proto";
+import "room.proto";
+
+service DsCenterRpcService
+{
+    // roomsvr请求分配一个DSAgent
+    rpc AllocDsa(roomsvr.AllocDsaReq) returns (roomsvr.AllocDsaResp)
+    {
+        option (app.protocol.METHOD_CMD) = 1;
+    }
+    // dsagent上报负载
+    rpc ReportDsaLoad(roomsvr.DsaReportLoadReq) returns (roomsvr.DsaReportLoadResp)
+    {
+        option (app.protocol.METHOD_CMD) = 2;
+    }
+}

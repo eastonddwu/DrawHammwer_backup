@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<metalib tagsetversion="1" name="tcaplus_tb" version="1" >
+
+	<struct name="room_member" version="1">
+		<entry name="gid" type="uint64" desc="玩家gid(=tconnd openid)" notnull="true" />
+		<entry name="join_timestamp" type="uint64" desc="加入时间戳(秒)" defaultvalue="0" />
+		<entry name="is_ready" type="uint32" desc="是否准备(1=是 0=否)" defaultvalue="0" />
+	</struct>
+
+	<struct name="room" version="1" primarykey="room_id" splittablekey="room_id" >
+		<entry name="room_id" type="string" size="64" desc="房间唯一ID(如R_00001)" notnull="true" />
+		<entry name="room_name" type="string" size="128" desc="房间名称" />
+		<entry name="host_gid" type="uint64" desc="房主gid" defaultvalue="0" />
+		<entry name="max_players" type="uint32" desc="最大人数(2-8)" defaultvalue="4" />
+		<entry name="state" type="uint32" desc="房间状态(0=Waiting 1=InBattle)" defaultvalue="0" />
+		<entry name="battle_server_address" type="string" size="64" desc="战斗DS地址(IP:Port)" />
+		<entry name="created_at" type="uint64" desc="创建时间戳(秒)" defaultvalue="0" />
+		<entry name="member_count" type="uint32" desc="当前成员数" defaultvalue="0" />
+		<entry name="members" type="room_member" count="8" refer="member_count" desc="房间成员列表" />
+	</struct>
+
+	<struct name="battle" version="1" primarykey="battle_id" splittablekey="battle_id" >
+		<entry name="battle_id" type="string" size="64" desc="战斗会话唯一ID(如B_00001)" notnull="true" />
+		<entry name="room_id" type="string" size="64" desc="关联房间ID" />
+		<entry name="server_address" type="string" size="64" desc="DS地址(IP:Port)" />
+		<entry name="player_count" type="uint32" desc="参战玩家数" defaultvalue="0" />
+		<entry name="players" type="uint64" count="8" refer="player_count" desc="参战玩家gid列表" />
+		<entry name="started_at" type="uint64" desc="开战时间戳(秒)" defaultvalue="0" />
+	</struct>
+
+	<struct name="login" version="1" primarykey="gid" splittablekey="gid" >
+		<entry name="gid" type="uint64" desc="玩家ID(player_id)" notnull="true" />
+		<entry name="login_flag" type="uint32" desc="登录标记" defaultvalue="1" />
+	</struct>
+
+	<struct name="user_info" version="1" primarykey="gid" splittablekey="gid" >
+		<entry name="gid" type="uint64" desc="玩家ID(player_id)" notnull="true" />
+		<entry name="is_new" type="uint32" desc="是否新玩家(1=新 0=老)" defaultvalue="0" />
+		<entry name="role_type" type="uint32" desc="用户角色类型" defaultvalue="0" />
+		<entry name="user_name" type="string" size="128" desc="用户名称" />
+		<entry name="points" type="uint64" desc="用户积分" defaultvalue="0" />
+	</struct>
+
+</metalib>

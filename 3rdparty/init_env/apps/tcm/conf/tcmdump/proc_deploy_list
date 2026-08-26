@@ -1,0 +1,6 @@
+3.1.0.1|50397185|app_server_host|connsvr|connsvr|/root/app/connsvr_3.1.0.1/bin|/root/app/connsvr_3.1.0.1/bin/../conf|world||connsvr|
+5.1.0.1|83951617|app_server_host|dbproxy|dbproxy|/root/app/dbproxy_5.1.0.1/bin|/root/app/dbproxy_5.1.0.1/bin/../conf|world||dbproxy|
+8.1.0.1|134283265|app_server_host|dsagent|dsagent|/root/app/dsagent_8.1.0.1/bin|/root/app/dsagent_8.1.0.1/bin/../conf|world||dsagent|
+7.1.0.1|117506049|app_server_host|dscenter|dscenter|/root/app/dscenter_7.1.0.1/bin|/root/app/dscenter_7.1.0.1/bin/../conf|world||dscenter|
+4.1.0.1|67174401|app_server_host|rolesvr|rolesvr|/root/app/rolesvr_4.1.0.1/bin|/root/app/rolesvr_4.1.0.1/bin/../conf|world||rolesvr|
+6.1.0.1|100728833|app_server_host|roomsvr|roomsvr|/root/app/roomsvr_6.1.0.1/bin|/root/app/roomsvr_6.1.0.1/bin/../conf|world||roomsvr|

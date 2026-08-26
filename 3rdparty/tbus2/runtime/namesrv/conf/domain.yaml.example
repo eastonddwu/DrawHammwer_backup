@@ -1,0 +1,73 @@
+# 该文件提供 domain.yaml 配置的示例，业务可以根据此文件生成实际的配置文件
+# 示例仅展示基础用法，更加详细的路由配置说明请阅读 README.md
+# 请遵循 yaml 格式的缩进规范，否则可能导致配置加载失败
+
+---
+version: 1
+busid_template: "8.8.8.8"
+gid_mask: "0xFFFF0000"
+# 配置不同群组的路由属性
+groups:
+  - group_id: 1.0.0.0
+    desc: 'stateless group'
+    # 支持的路由策略
+    route_types:
+      - ROUTE_TYPE_RANDOM
+  - group_id: 2.0.0.0
+    desc: 'stateful group'
+    route_types:
+      - ROUTE_TYPE_RANDOM
+      - ROUTE_TYPE_C_HASH
+    # 哈希环虚拟节点个数
+    route_c_hash_replica: 100
+    # 子群权重规则
+    shard_weights:
+      - shard_id: 1
+        weight: 20
+      - shard_id: 2
+        weight: 40
+    # 灰度规则
+    gray_rules:
+      - src_busid_spec: 1.0.0.2
+        hash_key_spec: '1000,1200-1210'
+        dest_busid: 2.0.0.1
+  - alias: "game100.shanghai.*.*"
+    desc: 'alias demo 1'
+    route_types:
+      - ROUTE_TYPE_M_HASH
+  - alias: "[game101, game102].[1-3]aa[100-200, tt, xx]zz.*.*"
+    desc: 'alias demo 2'
+    route_types:
+      - ROUTE_TYPE_MASTER
+# 确定每个分段下的别名分配规则
+alias_rules:
+  - level: 1
+    desc: "game"
+    # 固定分配规则
+    alias:
+      - "game100=100;game101=101;game102=102"
+  - level: 2
+    desc: "zone"
+    alias:
+      - "shanghai=100;taiyuan=101;beijing=102;gansu=103"
+    # 自动分配规则
+    min_autogen_id: 150
+    max_autogen_id: 255
+  - level: 3
+    desc: "platform"
+    alias:
+      - "ios=100"
+      - "android=101"
+    min_autogen_id: 150
+    max_autogen_id: 255
+  - level: 4
+    desc: "instance_id"
+    min_autogen_id: 150
+    max_autogen_id: 255
+# 指定 domain_id 对应的别名
+domain_alias_rules:
+  - "domain1=1"
+  - "domain2=2"
+# 跨集群转发的相关配置
+router:
+  proxy_gid: 1.100.0.0

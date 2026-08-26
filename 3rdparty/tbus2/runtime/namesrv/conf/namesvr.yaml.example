@@ -1,0 +1,216 @@
+# 注意：对Namesvr.yaml.example的修改需要同步修改到 https://iwiki.woa.com/p/4009935736，iwiki是OMS展示给业务的
+# namesvr.yaml.example，该文件提供namesvr配置的示例。业务可以根据此文件生成业务的配置文件。
+# namesvr的部分配置支持Reload，配置前的注释， "allow reload" 表示支持reload；"forbid reload" 表示不支持reload；
+
+---
+# max agent handshake time, -1 is no timeout
+# allow reload
+max_agent_handshake_sec: 10
+
+# max agent heartbeat timeout seconds, when hb timeout, will down agent & mounted endpoints
+# 支持在 domain.yaml 中用同名配置项指定具体 group 的心跳超时时长，最小允许设为 5s
+# -1 is no timeout
+# allow reload
+max_agent_hb_timeout_sec: 30
+
+# if agent has not receive hb response in half of hb_timeout_sec, should agent regard its route info expired
+# allow reload
+deal_net_fail: false
+
+# allow reload
+max_pending_agent_num: 1000
+max_agent_num: 20000
+
+# max goroutine num to proc rpc request, allow reload
+max_rpc_trans_num: 10000
+# max goroutine num to proc low level rpc request, allow reload
+max_rpc_trans_num_low_level: 5000
+# max goroutine num to proc rpc request per agent, allow reload
+max_rpc_trans_num_per_agent: 200
+
+# 有状态组变更协调配置，设计文档见：https://iwiki.woa.com/p/2030335719
+# 部分配置可被 domain.yaml 中的 GroupConf 配置覆盖：group_trans_level、group_trans_aggregate_ms、group_trans_aggregate_num、group_trans_block_msg_ms
+# allow reload
+# L1-2PC: 只有组成员的 agent 进程会参与协调过程，业务层无感知，变更期间不会阻塞发送端，丢包概率较大
+# L2-2PC: 在 L1-2PC 的基础上，阻塞发送端，基本可消除丢包
+# L3-2PC: 在 L2-2PC 的基础上，业务层也会参与协调过程，支持业务进行数据搬迁
+group_trans_level: 2
+# 通知重试轮次
+group_trans_retry_times: 3
+# 通知重试间隔，状态上报间隔
+group_trans_round_timeout_ms: 3000
+# 当首个变更请求抵达后，聚合一段时间才开始执行变更，避免路由频繁抖动，可调至秒级以实现更好的聚合效果
+# 若设置较大 group_trans_aggregate_ms，则 tbuspp_open(start_standby=false), tbuspp_join_group,
+# tbuspp_exit_group 等涉及组成员变动的调用，超时设置亦需适当增加
+group_trans_aggregate_ms: 200
+# 聚合请求数量的上限，到达上限后会立刻开始执行变更
+group_trans_aggregate_num: 100
+# 阻塞发送端的最大阻塞时长，只在 L2/L3 级别下生效
+group_trans_block_msg_ms: 1000
+# 最大等待阻塞通知响应时长，超时后即进入action=PREPARE/BLOCK
+group_trans_block_ack_ms: 100
+# 最低要求收到阻塞通知响应的百分比
+group_trans_block_ack_percent: 90
+
+# 自动 agent_id 分配范围，上下限可缺省，缺省下限为10000，缺省上限为1000000
+# forbid reload
+autogen_agent_id_min: 10000
+autogen_agent_id_max: 1000000
+
+# 自动 busid 分配，配置 ingroup_id 值范围（组内编号），
+# 缺省下限为10000，上限为0 时自动分配为可能的最大 ingroup_id 值, max_ingroup_id = ～group_mask - 1
+# 下限为0时，自动设置为 max_ingroup_id / 2
+# busid 由 Leader 节点进行分配
+# forbid reload
+autogen_busid_min: 0
+autogen_busid_max: 0
+
+# 强制需要全组范围内唯一分配最右侧内部ID的Group 清单，假定 gid 是 0.x.0 的形式，默认1.x.0, 2.x.0, ...会存在独立的生成空间。
+# 即可能会同时生成 1.x.1, 2.x.1 的Busid，如果将 0.x.0 包含在 `autogen_busid_groups_strict_uniq_insid`，则会在全组范围内唯一分配内部ID,
+# 即可以生成 1.x.1, 2.x.2, ...
+# forbid reload
+autogen_busid_groups_strict_uniq_insid: []
+
+# 自动 busid 分配相关信息落库周期，由 leader 节点负责执行
+# allow reload
+autogen_save_interval: 60
+
+# agent_id、busid、alias当前可分配的比例低于阈值时触发告警（0-100）
+# 0为不开启预警
+# allow reload
+autogen_alert_threshold: 20
+
+# 刚释放的 busid 必须等待冷却时长后才允许被重新自动分配（但是可以手动分配），避免网络分区时旧节点的 busid 被新节点占用
+# allow reload
+free_id_cool_down_sec: 600
+
+# timeout between NS call
+# allow reload
+max_ns_pool_conn_sec: 3
+# max connection number between two NS instances
+# allow reload
+max_ns_pool_capacity: 100
+
+# 基于 session id 分配的 payload servant 信息最大维护时长
+# allow reload
+keep_payload_servant_sec: 7200
+
+# endpoint 允许分配的最大负载量，默认值 MaxInt32
+# allow reload
+max_endpoint_load: 2147483647
+
+# prom_* forbid reload
+# 使用 prom_registry_addr 时，该节点的 prometheus job 信息；默认 tbus2_ns
+prom_job_name: "tbus2_ns"
+# labels for prom collect
+# prom_labels: "key1=value1;key2=value2"
+prom_labels: ""
+
+# 接口认证采用auth_token认证，为空时关闭认证（接口传递任何token或不传都会通过）
+# 可配置多个token，接口传入值匹配任意一个即可通过认证。
+# agent启动时需要携带该auth_token
+# HTTP请求需要携带请求头Authentication: Basic base64encode(':'+auth_token)，即username="",password=auth_token
+# auth_token_list = ["token1", ...]
+# allow reload
+auth_token_list: []
+
+# broadcast group & endpoint change events, allow reload
+broadcast_changes: false
+
+# 0 debug 1 info 2 warn 3 err; -1 not change.
+# allow reload
+log_level: 1
+
+# namesvr监听agent_side_tls_bind_addr时，需要设置TLS证书；
+# 正式环境请勿使用默认证书，可通过 gen_ns_cert.sh 生成新的CA与证书
+# forbid reload
+# agent_side_tls_cert_file: "conf/ns_cert.pem"
+# agent_side_tls_key_file: "conf/ns_key.pem"
+
+# DB(etcd)相关配置
+# db_* forbid reload
+# cluster mode need etcd
+# etcd access addresses, ',' sperate multipy address, ex:
+# url = "192.168.0.1:2379,192.168.0.2:2379,192.168.0.3:2379"
+db_url: ""
+# ttl unit: second
+db_lease_ttl: 5
+db_conn_timeout_ms: 5000
+db_op_wait_ms: 5000
+
+# cluster prefix, default: tbus2
+db_data_key_root: "tbus2"
+
+# 认证方式可以选择 username&password 或 TLS 认证 或 不配置
+# db_username: ""
+# db_password: ""
+# 启用TLS 认证时，需要指定客户端TLS证书
+# db_tls_ca_file: "conf/etcd_ca.pem"
+# 或者直接配置私钥与公钥文件
+# db_tls_key_file: "conf/etcd_client_key.pem"
+# db_tls_cert_file: "conf/etcd_client_cert.pem"
+
+# agent global conf begin -------------------
+#  agent启动后主动获取到本地，并且周期通过心跳校验本地和Ns的版本是否一致，不一致则从Ns拉取最新的版本到Agent。
+agent_global_conf:
+  # 注意：每次修改配置后必须更新此版本号
+  version: 1
+  trace:
+    # [数据上报配置]
+    # 协议：仅支持HTTP（暂不支持HTTPS）
+    # 路径：必须符合OTLP规范（v1/traces）
+    server_url: "http://bk-report-1.woa.com:4318/v1/traces"
+    # [认证令牌]
+    # - 非空：通过'x-bk-token'请求头传递
+    # - 暂时只支持Bk服务中心认证
+    server_token: ""
+    # 是否启用 trace
+    disabled: false
+    # [采样策略]
+    # 无 filter 配置时的默认行为：
+    # - 上报所有Span
+    # 
+    # 匹配执行流程：
+    # 1. 按定义顺序应用 filter 规则
+    # 2. 首个匹配的 filter 决定处理动作
+    # 3. 无匹配 filter 时：丢弃当前span
+    filters:
+    - filter:
+      # [匹配逻辑]
+      # 1. 先通过 trace_id 结合 samplerRate 决定当前 trace 是否被采样
+      # 2. 在通过 expr&rules 匹配当前 SpanAttr，成功则上报当前 Span；如果 expr&rules 为空，则默认上报。
+      # 3. expr&rules 匹配规则如下:
+      #   1. rules 的 tag 去匹配 SpanAttr
+      #   2. expr 表达式计算匹配结果
+      #
+      # [表达式语法，基于 ECMAScript 默认语法，https://en.cppreference.com/w/cpp/regex.html]
+      # - 支持逻辑运算符：&& (与)、|| (或)
+      # - 支持括号分组
+      # - 示例："(A && B) || C" 表示：
+      #   (标签A匹配成功 且 标签B匹配成功) 或 标签C匹配成功
+      expr: "( cmd && pod_name ) || tbus2.service_name"
+      rules:
+      - tagName: cmd
+        tagRegex: "(100|200|300)"
+      - tagName: tbus2.service_name
+        tagRegex: "(lobby|match|ds|trace_test)"
+      - tagName: pod_name
+        tagRegex: ^xxyyzz
+      # [采样率配置]
+      # 范围：0-1000（1000=100%采样）
+      # 默认：0（不采样）
+      samplerRate: 1
+      desc: "部分采样，采样率千分之1"
+    - filter:
+      expr: "( cmd && tbus2.service_name ) || pod_name"
+      rules:
+      - tagName: cmd
+        tagRegex: "(100|200|300)"
+      - tagName: tbus2.service_name
+        tagRegex: "(lobby|match|ds|trace_test)"
+      - tagName: pod_name
+        tagRegex: ^xxyyzz
+      samplerRate: 1000
+      desc: "全采样"
+
+# global conf end -------------------

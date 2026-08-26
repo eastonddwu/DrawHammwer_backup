@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "routers": [
+    {
+      "domain_id": 1,
+      "domain_router_gid": "100.1.0.0"
+    },
+    {
+      "domain_id": 2,
+      "domain_router_gid": "100.2.0.0"
+    },
+    {
+      "domain_id": 3,
+      "domain_router_gid": "100.3.0.0"
+    }
+  ]
+}

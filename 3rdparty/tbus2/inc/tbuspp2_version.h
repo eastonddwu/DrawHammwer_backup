@@ -1,0 +1,35 @@
+// Copyright (c) Tencent
+// Create: 2022-04-26
+
+// tbus2 version
+
+#ifndef TBUSPP2_INC_TBUSPP2_VERSION_H_
+#define TBUSPP2_INC_TBUSPP2_VERSION_H_
+
+#include "tbuspp2_defs.h"
+
+#define TBUS2_VER_MAJOR 0
+#define TBUS2_VER_MINOR 16
+#define TBUS2_VER_PATCH 4
+
+#ifndef TBUS2_VER_RCTAG
+#define TBUS2_VER_RCTAG ""
+#endif
+
+#define TBUS2_VERSION TBUS2_MAKE_VERSION(TBUS2_VER_MAJOR, TBUS2_VER_MINOR, TBUS2_VER_PATCH)
+
+// 如未改变 MQ 文件或者消息结构，下面版本约束无需变更
+#define TBUS2_MIN_REQUIRE_API_VERSION TBUS2_MAKE_VERSION(0, 8, 0)  // agent要求api的最低版本
+#define TBUS2_MIN_REQUIRE_AGENT_VERSION TBUS2_MAKE_VERSION(0, 13, 11)  // api要求agent的最低版本
+
+// 使用别名注册实例时要求 agent & ns 的最低版本
+#define TBUS2_USE_ALIAS_MIN_REQUIRE_AGENT_VERSION TBUS2_MAKE_VERSION(0, 14, 6)
+#define TBUS2_USE_ALIAS_MIN_REQUIRE_NS_VERSION TBUS2_MAKE_VERSION(0, 16, 4)
+
+// 使用别名发包时要求 agent 的最低版本
+#define TBUS2_SEND_BY_ALIAS_MIN_REQUIRE_AGENT_VERSION TBUS2_MAKE_VERSION(0, 15, 5)
+// 使用远程队列限制 Agent 和 Api 的最低版本
+#define TBUS2_USE_REMOTE_MQ_MIN_REQUIRE_API_VERSION TBUS2_MAKE_VERSION(0, 16, 1)  // agent要求api
+#define TBUS2_USE_REMOTE_MQ_MIN_REQUIRE_AGENT_VERSION TBUS2_MAKE_VERSION(0, 16, 1)  // api要求agent
+
+#endif  // TBUSPP2_INC_TBUSPP2_VERSION_H_

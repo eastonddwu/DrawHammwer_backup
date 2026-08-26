@@ -1,0 +1,23 @@
+_tcm() 
+{
+    local cur prev opts base
+    # let colon no longer be the special word sperator 
+    # COMP_WORDBREAKS=${COMP_WORDBREAKS//:}
+
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts=$(admin list all)
+
+    #if admin list needarg | grep -q ${prev} &> /dev/null; then
+    if [[ ${prev} = "cmd" ]]; then
+    	local running=$(admin list cmd)
+    	COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )
+        return 0
+    fi
+
+   COMPREPLY=($(compgen -W "${opts}" -- ${cur}))  
+   return 0
+}
+complete -F _tcm cmd admin

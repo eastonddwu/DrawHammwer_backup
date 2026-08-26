@@ -1,0 +1,299 @@
+// file name: conn.proto
+// description: connsvr业务消息与服务定义，method上的METHOD_CMD option用于运行时反射注册cmd->handler
+
+syntax = "proto3";
+
+package connsvr;
+
+import "rpc_options.proto";
+
+// ========== 登录 / 注册 ==========
+
+message LoginReq
+{
+    uint32 gopenid = 1; // 仅作为tbus2测试回退，正式流程从tconnd session获取openid
+}
+
+message LoginResp
+{
+    uint64 gid = 1;
+    bool is_new = 2;      // 是否新玩家
+    uint32 role_type = 3; // 角色类型
+    string user_name = 4; // 用户名称
+    uint64 points = 5;    // 用户积分
+    int32 ret_code = 6;   // 0=成功，非0见connsvr错误码
+}
+
+message GuestLoginReq
+{
+    string guest_name = 1; // 仅游客昵称，Header.gid必须为0
+}
+
+message GuestLoginResp
+{
+    int32 ret_code = 1;   // 0=成功，非0见connsvr错误码
+    uint64 gid = 2;       // 成功时必填，失败时为0
+    string user_name = 3; // 过滤后的昵称
+    bool is_guest = 4;    // 成功时恒true
+}
+
+message SetUserInfoReq
+{
+    uint64 gid = 1;          // 玩家ID
+    string user_name = 2;    // 用户名称
+    uint32 role_type = 3;    // 角色类型
+}
+
+message SetUserInfoResp
+{
+    uint64 gid = 1;
+    string user_name = 2;
+    uint32 role_type = 3;
+    int32 ret_code = 4;      // 0=成功
+}
+
+// ========== 房间快照（推送用）==========
+
+message RoomBrief
+{
+    string room_id         = 1;
+    string room_name       = 2;
+    string host_gid        = 3;    // uint64 gid 用 string 承载以兼容 JS/lua
+    int32  current_players = 4;
+    int32  max_players     = 5;
+    bool   in_battle       = 6;
+    bool   has_last_match  = 7;  // 是否有战绩可查看
+    uint32 map_id          = 8;  // 当前房间地图
+    string host_display_name = 9;  // 当前房主登录昵称；与RoomMemberProto.display_name同源，查不到时为空
+}
+
+message RoomMemberProto
+{
+    string gid              = 1;
+    int64  join_timestamp   = 2;
+    bool   is_ready         = 3;
+    uint32 battle_role_type = 4;  // 本局局内角色；进房默认为1，Waiting未准备时可改选
+    bool   b_is_bot         = 5;  // true=人机占位
+    string bot_id           = 6;  // 仅人机有值
+    uint32 slot_index       = 7;  // 固定座位，范围1..max_players
+    string display_name     = 8;  // 真人登录昵称；人机可空
+}
+
+message MatchPlayer
+{
+    string gid              = 1;  // uint64 gid 用 string 承载以兼容 JS/lua；Bot为"0"
+    string display_name     = 2;
+    int32  kills            = 3;
+    int32  deaths           = 4;
+    int32  rank             = 5;
+    uint32 battle_role_type = 6;  // 本局固化的局内角色
+    bool   b_is_bot         = 7;
+    string bot_id           = 8;
+}
+
+message MatchSummary
+{
+    uint32 duration_sec    = 1;
+    uint32 end_reason      = 2;
+    repeated MatchPlayer players = 3;
+}
+
+message RoomDetailSnapshot
+{
+    string room_id                = 1;
+    string room_name              = 2;
+    string host_gid               = 3;
+    int32  max_players            = 4;
+    repeated RoomMemberProto members = 5;
+    bool   in_battle              = 6;
+    string battle_server_address  = 7;
+    MatchSummary last_match       = 8;  // 上一场战绩
+    uint32 map_id                 = 9;  // 当前房间地图
+}
+
+message RoomListSnapshot
+{
+    repeated RoomBrief rooms = 1;
+}
+
+// ========== 房间列表查询 ==========
+
+message RoomListReq  {}
+message RoomListRsp  { int32 code = 1; RoomListSnapshot snapshot = 2; }
+
+// ========== 房间操作（客户端→connsvr→roomsvr）==========
+
+message RoomCreateReq
+{
+    string room_name  = 1;
+    int32  max_players = 2;
+    uint32 map_id     = 3;  // 0/缺省由后台使用101
+}
+
+message RoomCreateRsp
+{
+    int32  code    = 1;
+    string message = 2;
+    string room_id = 3;
+}
+
+message RoomJoinReq
+{
+    string room_id = 1;
+}
+
+message RoomJoinRsp
+{
+    int32  code    = 1;
+    string message = 2;
+}
+
+message RoomLeaveReq  {}
+message RoomLeaveRsp  { int32 code = 1; string message = 2; }
+
+message RoomSetReadyReq
+{
+    bool b_ready = 1;
+}
+
+message RoomSetReadyRsp
+{
+    int32  code    = 1;
+    string message = 2;
+}
+
+message RoomStartBattleReq  {}
+message RoomStartBattleRsp  { int32 code = 1; string message = 2; }
+
+message RoomSetRoleReq  { uint32 battle_role_type = 1; }  // Waiting时设置；已准备房主仍可调整；合法值>=1
+message RoomSetRoleRsp  { int32 code = 1; string message = 2; }
+
+message RoomSetMapReq  { uint32 map_id = 1; }
+message RoomSetMapRsp  { int32 code = 1; string message = 2; }
+
+// 房间快捷表情：仅Waiting可发，emote_id必须1~6，同一gid 2秒冷却。
+// 发送者gid只走包头（ClientHeader.gid），body不带gid以防伪造。
+message RoomSendEmoteReq  { uint32 emote_id = 1; }
+message RoomSendEmoteRsp  { int32 code = 1; string message = 2; }
+
+message RoomAddBotReq  {}
+message RoomAddBotRsp  { int32 code = 1; string message = 2; string bot_id = 3; uint32 slot_index = 4; }
+message RoomRemoveBotReq  { string bot_id = 1; uint32 slot_index = 2; }
+message RoomRemoveBotRsp  { int32 code = 1; string message = 2; }
+
+message RoomRenameReq
+{
+    string new_name = 1;
+}
+
+message RoomRenameRsp
+{
+    int32  code    = 1;
+    string message = 2;
+}
+
+// ========== 服务端推送（S→C）==========
+
+message PushRoomBattleReady
+{
+    string server_address = 1;  // "IP:Port"
+    uint64 token          = 2;  // DS认证token（每人独立）
+    string battle_id      = 3;
+}
+
+message PushRoomKicked
+{
+    string reason = 1;
+}
+
+// 旧版兼容消息；新roomsvr不再发送
+message PushRoomSelecting
+{
+    int64  select_end_unix_ms  = 1;  // 选人截止时间戳（毫秒）
+    uint32 select_duration_sec = 2;  // 本次选人总时长
+}
+
+message PushRoomBattleFailed
+{
+    int32  reason  = 1;  // DS池耗尽/CreateGame失败等
+    string message = 2;
+}
+
+// 房间表情广播（cmd=2006），推给房间内全部真人（含发送者）
+message PushRoomEmote
+{
+    string sender_gid     = 1;  // uint64 gid 用 string 承载，与RoomMemberProto.gid同一套
+    uint32 emote_id       = 2;  // 1~6
+    int64  expire_unix_ms = 3;  // 本期恒为0：客户端按收到时刻+3s自行计时（绝对墙上时钟受端上时钟偏移影响）
+}
+
+// ========== 服务定义 ==========
+
+service ConnRpcService
+{
+    // 登录/注册
+    rpc Login(LoginReq) returns (LoginResp)
+    {
+        option (app.protocol.METHOD_CMD) = 1;
+    }
+    rpc GuestLogin(GuestLoginReq) returns (GuestLoginResp)
+    {
+        option (app.protocol.METHOD_CMD) = 5;
+    }
+    rpc SetUserInfo(SetUserInfoReq) returns (SetUserInfoResp)
+    {
+        option (app.protocol.METHOD_CMD) = 3;
+    }
+
+    // 房间列表查询
+    rpc RoomList(RoomListReq) returns (RoomListRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 102;
+    }
+
+    // 房间操作
+    rpc RoomCreate(RoomCreateReq) returns (RoomCreateRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 200;
+    }
+    rpc RoomJoin(RoomJoinReq) returns (RoomJoinRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 202;
+    }
+    rpc RoomLeave(RoomLeaveReq) returns (RoomLeaveRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 204;
+    }
+    rpc RoomSetReady(RoomSetReadyReq) returns (RoomSetReadyRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 205;
+    }
+    rpc RoomStartBattle(RoomStartBattleReq) returns (RoomStartBattleRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 206;
+    }
+    rpc RoomRename(RoomRenameReq) returns (RoomRenameRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 207;
+    }
+    rpc RoomSetRole(RoomSetRoleReq) returns (RoomSetRoleRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 208;
+    }
+    rpc RoomAddBot(RoomAddBotReq) returns (RoomAddBotRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 209;
+    }
+    rpc RoomRemoveBot(RoomRemoveBotReq) returns (RoomRemoveBotRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 210;
+    }
+    rpc RoomSetMap(RoomSetMapReq) returns (RoomSetMapRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 211;
+    }
+    rpc RoomSendEmote(RoomSendEmoteReq) returns (RoomSendEmoteRsp)
+    {
+        option (app.protocol.METHOD_CMD) = 212;
+    }
+}

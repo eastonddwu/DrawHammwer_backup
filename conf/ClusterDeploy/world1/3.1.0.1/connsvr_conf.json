@@ -1,0 +1,6 @@
+{
+    "svr_id": 50397185,
+    "tconnd_addr": "0x64",
+    "tbus2_agent_url": "tcp://127.0.0.1:8001",
+    "shm_key": "0x41F0"
+}

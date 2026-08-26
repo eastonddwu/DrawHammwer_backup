@@ -1,0 +1,16 @@
+#!/bin/bash
+if [ $UID != 30000 ];then
+    echo "Error:Please use the account [user00]"
+    exit -1 
+fi
+
+process=`ps aux |grep tcmconsole |grep -v 'grep' |wc -l`
+
+if [ $process != 0 ];then
+    echo "Error:Console already exists!"
+    exit -1
+fi
+
+./tcmcenter  --id=0.0.1.1 stop
+./tcmcenter --id=0.0.1.1 --conf-file=../cfg/tcmcenter.xml --tlogconf=../cfg/tcmcenter_log.xml --bus-key=1000 --conf-format=3 -D start
+./tcmconsole --conf-file=../cfg/tcmconsole.xml --tlogconf=../cfg/tcmconsole_log.xml  start

@@ -1,0 +1,18 @@
+# 运行时日志（不入库）
+apps/*/log/
+apps/tcm/water_log/
+apps/tcm/tbus.log
+
+# 运行时自动生成的配置（tcm_admin.sh tcm_init 生成）
+apps/tcm/cfg/tcmcenter.xml.auto
+apps/tcm/cfg/tcmconsole.xml.auto
+apps/tcenterd/cfg/tcenterd.xml.auto
+apps/tagent/cfg/tagent.xml.auto
+apps/tconnd/cfg/tconnd.xml.auto
+apps/tools/tbusmgr.xml.auto
+
+# tagent 保存的进程快照
+apps/tagent/bin/*.save
+
+# proc_status 运行时状态
+apps/tcm/conf/proc_status/

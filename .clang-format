@@ -1,0 +1,41 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+PointerAlignment: Right
+DerivePointerAlignment: true
+# 之前太多代码在未开启的时候 format 了，开启会有较多修改，不好代码溯源。如有需要，自行开启
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  AfterCaseLabel: true
+BreakBeforeBraces: Custom
+ColumnLimit: 120
+IndentWidth: 4
+TabWidth: 4
+IncludeBlocks: Preserve
+
+---
+Language: Proto
+DisableFormat: true
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 1000
+# 对齐连续的尾随的注释
+AlignTrailingComments: true
+# 在一个注释中引入换行的penalty
+PenaltyBreakComment: 1000
+# 允许重新排版注释
+ReflowComments: true

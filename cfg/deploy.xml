@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="GBK" standalone="yes" ?>
+<!--
+  deploy.xml.tmpl — 单机部署方案模板
+  注意: 本文件是模板，/root/app 占位符会在每次 `./start.sh start` 时
+  由 render_tcm_configs()（见 start.sh）动态替换为当前 app_server 同级目录下
+  的 app 绝对路径，生成实际生效的 cfg/deploy.xml（该生成文件不应手工编辑，
+  修改请编辑本 .tmpl 文件）。
+
+  TCM 要求 world ID 范围 [1,255)，不能为 0
+  world=1, zone=0, inst=1
+
+  TCM 计算 bus_id（AddrTemple="function:8.world:8.zone:4.instance:12"）:
+    connsvr:  FuncID=3, world=1, zone=0, inst=1 → 0x03010001
+    rolesvr:  FuncID=4, world=1, zone=0, inst=1 → 0x04010001
+    dbproxy:  FuncID=5, world=1, zone=0, inst=1 → 0x05010001
+    roomsvr:  FuncID=6, world=1, zone=0, inst=1 → 0x06010001
+    dscenter: FuncID=7, world=1, zone=0, inst=1 → 0x07010001
+    dsagent:  FuncID=8, world=1, zone=0, inst=1 → 0x08010001
+
+  说明: app_server C++ 代码中的 busid 格式是 0xFFSSSSSS（GroupBase|svr_id），
+  world 字节嵌入高字节之后的第二字节。svr_id=1 时，world=0→0x03000001，world=1→0x03010001。
+  两套都能工作，这里选 world=1 满足 TCM 格式要求。
+-->
+<tcmcenter>
+    <ClusterDeploy>
+        <world ID="1" WorkPath="/root/app">
+            <DeloyGroup Group="dbproxy" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="dscenter" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="dsagent" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="roomsvr" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="rolesvr" Host="app_server_host" InstID="1"/>
+            <DeloyGroup Group="connsvr" Host="app_server_host" InstID="1"/>
+        </world>
+    </ClusterDeploy>
+</tcmcenter>
