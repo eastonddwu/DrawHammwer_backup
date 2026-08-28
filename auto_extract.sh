@@ -13,8 +13,9 @@ PATTERN="${PATTERN:-DrawHammer_LinuxServer_*.tar}"
 POLL_INTERVAL="${POLL_INTERVAL:-10}"  # 秒
 STABLE_COUNT="${STABLE_COUNT:-2}"    # 文件指纹连续稳定次数才视为上传完成
 
-# 企业微信机器人告警 — 将 YOUR_WEBHOOK_KEY 替换为实际的 key  https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5df471f6-c004-4a7a-b514-aa20e23a3c9b
-WECOM_WEBHOOK_KEY="${WECOM_WEBHOOK_KEY:-5df471f6-c004-4a7a-b514-aa20e23a3c9b}"
+# 企业微信机器人 webhook key。建议用环境变量覆盖，避免把 key 提交进仓库：
+#   WECOM_WEBHOOK_KEY=xxxx nohup ./auto_extract.sh &
+WECOM_WEBHOOK_KEY="${WECOM_WEBHOOK_KEY:-588acf54-9162-4bb8-ac76-b5474532a2e0}"
 
 mkdir -p "$EXTRACT_DIR" "$STATE_DIR"
 EXTRACT_DIR=$(readlink -f -- "$EXTRACT_DIR")
@@ -27,38 +28,59 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+# 转义 JSON 字符串：反斜杠、双引号、换行。
+# tar 的报错信息里可能带引号或路径反斜杠，不转义会把 payload 撑坏导致通知静默丢失。
+json_escape() {
+    local s="$1"
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    printf '%s' "$s"
+}
+
 send_notify() {
     local status="$1"   # 成功 或 失败
     local tar_name="$2"
-    local detail="$3"   # 成功时为文件列表，失败时为错误信息
+    local detail="$3"   # 仅失败时使用；成功不输出目录和文件列表
 
     # 未配置 key 则跳过通知
-    if [ "$WECOM_WEBHOOK_KEY" = "YOUR_WEBHOOK_KEY" ]; then
+    if [ -z "$WECOM_WEBHOOK_KEY" ] || [ "$WECOM_WEBHOOK_KEY" = "YOUR_WEBHOOK_KEY" ]; then
         log "通知未发送（WECOM_WEBHOOK_KEY 未配置）"
         return
     fi
 
-    local hostname=$(hostname)
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local tag="[告警]"
+    local host_name timestamp content
+    host_name=$(hostname)
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+
     if [ "$status" = "成功" ]; then
-        tag="[通知]"
+        content="## 🎮 新包已就位，可以开测啦！
+<font color=\"info\">温馨提示！！服务器已解压客户端新包，可以进行测试啦！！！</font>
+> 📦 包名：\`${tar_name}\`
+> 🖥️ 主机：${host_name}
+> ⏰ 时间：${timestamp}
+
+祝各位测试顺利，少踩 bug 多摸鱼 🐟"
+    else
+        # 失败详情要留着排查，但企业微信 markdown 上限 4096 字节，超长会整条发不出去
+        local brief
+        brief=$(printf '%s' "$detail" | head -c 1200)
+        [ "${#detail}" -gt 1200 ] && brief="${brief}
+...（详情见 ${LOG_FILE}）"
+        content="## ⚠️ 新包解压失败
+<font color=\"warning\">这个包没装上，测试先别急，等下一版。</font>
+> 📦 包名：\`${tar_name}\`
+> 🖥️ 主机：${host_name}
+> ⏰ 时间：${timestamp}
+
+${brief}"
     fi
 
-    local content="${tag} DrawHammer 解压${status}\n主机: ${hostname}\n文件: ${tar_name}\n时间: ${timestamp}\n${detail}"
-
-    local payload=$(cat <<EOF
-{
-    "msgtype": "text",
-    "text": {
-        "content": "${content}"
-    }
-}
-EOF
-)
+    local payload
+    payload=$(printf '{"msgtype":"markdown","markdown":{"content":"%s"}}' "$(json_escape "$content")")
 
     local resp
-    resp=$(curl -s -X POST \
+    resp=$(curl -s --max-time 10 -X POST \
         "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${WECOM_WEBHOOK_KEY}" \
         -H 'Content-Type: application/json' \
         -d "$payload" 2>&1)
@@ -110,7 +132,8 @@ record_stable_failure() {
     log "状态: 失败（${reason}）"
     log "错误: $detail"
     log "===== 处理结束: $tar_name [失败] ====="
-    send_notify "失败" "$tar_name" "原因: ${reason}\n${detail}"
+    send_notify "失败" "$tar_name" "原因: ${reason}
+${detail}"
     return 1
 }
 
@@ -285,7 +308,7 @@ extract_tar() {
     rm -f -- "$state_file"
     log "===== 处理结束: $tar_name [成功] ====="
 
-    send_notify "成功" "$tar_name" "文件列表:\n$file_list"
+    send_notify "成功" "$tar_name"
 }
 
 # 检查是否有inotifywait可用，优先使用inotify

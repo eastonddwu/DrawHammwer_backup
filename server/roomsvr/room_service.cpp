@@ -13,6 +13,7 @@
  */
 
 #include "room_service.h"
+#include <string>
 #include "common/clock.h"
 #include "common/text_util.h"
 #include "core/log.h"
@@ -537,6 +538,8 @@ void RoomService::StartBattle(app::RpcContext& context)
     Room* room = RoomMgr::GetInst().GetRoom(room_id);
     if (!room)
     {
+        APP_LOG_INFO(gid, "StartBattle reject, room not found, room_id(%llu), ret_code(%d)",
+                     static_cast<unsigned long long>(room_id), kRoomNotFound);
         rsp.set_ret_code(kRoomNotFound);
         context.ret_code = app::RPC_SUCCESS;
         return;
@@ -545,6 +548,9 @@ void RoomService::StartBattle(app::RpcContext& context)
     // 校验：仅房主
     if (!room->IsHost(gid))
     {
+        APP_LOG_INFO(gid, "StartBattle reject, not host, room_id(%llu), host_gid(%llu), ret_code(%d)",
+                     static_cast<unsigned long long>(room_id), static_cast<unsigned long long>(room->host_gid()),
+                     kNotHost);
         rsp.set_ret_code(kNotHost);
         context.ret_code = app::RPC_SUCCESS;
         return;
@@ -553,6 +559,9 @@ void RoomService::StartBattle(app::RpcContext& context)
     // 校验：不在战斗中 / 选人中 / DS分配中（仅 WAITING 可开战）
     if (room->in_battle() || room->state() != ROOM_STATE_WAITING)
     {
+        APP_LOG_INFO(gid, "StartBattle reject, room busy, room_id(%llu), state(%u), in_battle(%d), ret_code(%d)",
+                     static_cast<unsigned long long>(room_id), room->state(), room->in_battle() ? 1 : 0,
+                     kAlreadyInBattle);
         rsp.set_ret_code(kAlreadyInBattle);
         context.ret_code = app::RPC_SUCCESS;
         return;
@@ -561,6 +570,10 @@ void RoomService::StartBattle(app::RpcContext& context)
     // 校验：至少1名真人，且真人+Bot总人数 >= 2
     if (room->real_player_count() < 1 || room->member_count() < 2)
     {
+        APP_LOG_INFO(gid,
+                     "StartBattle reject, not enough players, room_id(%llu), real(%u), total(%u), ret_code(%d)",
+                     static_cast<unsigned long long>(room_id), room->real_player_count(), room->member_count(),
+                     kNotEnoughPlayers);
         rsp.set_ret_code(kNotEnoughPlayers);
         context.ret_code = app::RPC_SUCCESS;
         return;
@@ -569,6 +582,18 @@ void RoomService::StartBattle(app::RpcContext& context)
     // 校验：全员准备
     if (!room->AllReady())
     {
+        // 打印未准备的真人gid，便于定位"点开始没反应"（历史上房主准备态被结算清掉过）
+        std::string not_ready;
+        for (const auto& m : room->members())
+        {
+            if (m.b_is_bot || m.is_ready)
+                continue;
+            if (!not_ready.empty())
+                not_ready += ",";
+            not_ready += std::to_string(m.gid);
+        }
+        APP_LOG_INFO(gid, "StartBattle reject, not all ready, room_id(%llu), not_ready_gids(%s), ret_code(%d)",
+                     static_cast<unsigned long long>(room_id), not_ready.c_str(), kNotAllReady);
         rsp.set_ret_code(kNotAllReady);
         context.ret_code = app::RPC_SUCCESS;
         return;

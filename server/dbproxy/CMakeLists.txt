@@ -55,6 +55,24 @@ target_link_libraries(dbproxy PRIVATE app_framework ${TSF4G_LIBS}
     /usr/lib64/liblzo2.so.2 /usr/lib64/libsnappy.so.1
     pthread dl anl ssl crypto)
 
+# ---- test_mysql_async: MysqlWrap协程异步实现的独立验证（不依赖tbus2/tcaplus/TCM） ----
+add_executable(test_mysql_async ${ROOT_DIR}/tests/dbproxy/test_mysql_async.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mysql_wrap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/db_conf.cpp
+    ${TDR_CPP})
+add_dependencies(test_mysql_async tdr_table_gen)
+target_include_directories(test_mysql_async PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CUR_TABLE_DIR}
+    ${PROTO_GEN_DIR}
+    ${MARIADB_INCLUDE_DIR}
+)
+target_link_libraries(test_mysql_async PRIVATE app_framework ${TSF4G_LIBS}
+    tdr tdr_comm
+    ${MARIADB_LIBRARY}
+    pthread dl anl ssl crypto)
+
 # ---- test_tcaplus: 独立tcaplus验证测试 ----
 add_executable(test_tcaplus ${ROOT_DIR}/tests/dbproxy/test_tcaplus.cpp ${TDR_CPP})
 add_dependencies(test_tcaplus tdr_table_gen)

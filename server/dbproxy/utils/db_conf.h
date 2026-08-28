@@ -32,6 +32,11 @@ struct MysqlConf
     std::string password;
     std::string database;
     std::vector<std::string> table_names;  // 支持多表，配置文件中每行一个table_name
+    // 连接池大小，即dbproxy对MySQL的最大并发请求数（每条连接同时只能有一个在飞查询）
+    uint32_t conn_num = 32;
+    // 单次异步操作等待socket就绪的超时（毫秒）。超时意味着查询还在飞、
+    // 协议状态不明，该连接会被关掉重连，故要明显小于调用方的RPC超时(1000ms)
+    uint32_t op_timeout_ms = 800;
 };
 
 struct DbConf

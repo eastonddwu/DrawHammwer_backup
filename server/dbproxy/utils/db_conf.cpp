@@ -111,7 +111,14 @@ bool DbConf::ParseMysqlFromFile(const std::string& conf_file)
             mysql_conf.database = value;
         else if (key == "table_name")
             mysql_conf.table_names.push_back(value);
+        else if (key == "conn_num")
+            mysql_conf.conn_num = static_cast<uint32_t>(atoi(value.c_str()));
+        else if (key == "op_timeout_ms")
+            mysql_conf.op_timeout_ms = static_cast<uint32_t>(atoi(value.c_str()));
     }
+
+    if (mysql_conf.conn_num == 0)
+        mysql_conf.conn_num = 1;
 
     if (mysql_conf.host.empty() || mysql_conf.database.empty() || mysql_conf.table_names.empty())
     {
@@ -126,8 +133,9 @@ bool DbConf::ParseMysqlFromFile(const std::string& conf_file)
         if (i > 0) tables += ",";
         tables += mysql_conf.table_names[i];
     }
-    APP_LOG_INFO(0, "mysql conf loaded: host=%s, port=%u, database=%s, tables=[%s]",
-                 mysql_conf.host.c_str(), mysql_conf.port, mysql_conf.database.c_str(), tables.c_str());
+    APP_LOG_INFO(0, "mysql conf loaded: host=%s, port=%u, database=%s, tables=[%s], conn_num=%u, op_timeout_ms=%u",
+                 mysql_conf.host.c_str(), mysql_conf.port, mysql_conf.database.c_str(), tables.c_str(),
+                 mysql_conf.conn_num, mysql_conf.op_timeout_ms);
     return true;
 }
 

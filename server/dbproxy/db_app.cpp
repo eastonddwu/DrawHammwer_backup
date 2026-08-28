@@ -96,11 +96,18 @@ bool DBApp::OnInit()
 
 size_t DBApp::OnProc(uint64_t now_ms, bool stop)
 {
-    if (stop)
-        return 0;
     // tcaplus回包轮询：tbus2是default transport由框架自动驱动，
     // tcaplus的OnUpdate/RecvResponse需要在这里手动驱动
-    return TcapWrap::GetInst().Proc();
+    size_t count = stop ? 0 : TcapWrap::GetInst().Proc();
+
+    // mysql异步回包轮询。stop时也要继续驱动：停机流程靠SvrStopReady()等
+    // PendingContextNum()归零，不驱动的话在飞的等待上下文只能靠超时清空。
+    // 返回值非0会让tapp主循环跳过iIdleSleep保持热转，这是异步化不引入额外
+    // 唤醒延迟的关键（见mysql_wrap.h对Proc()的说明）。
+    if (db_backend_ == DbBackend::kMysql)
+        count += MysqlWrap::GetInst().Proc();
+
+    return count;
 }
 
 bool DBApp::OnFinish()
@@ -169,7 +176,7 @@ int DBApp::InitTcaplus()
 
 int DBApp::InitMysql()
 {
-    return MysqlWrap::GetInst().Init(mysql_conf_);
+    return MysqlWrap::GetInst().Init(mysql_conf_, &context_ctrl_);
 }
 
 }  // namespace dbproxy

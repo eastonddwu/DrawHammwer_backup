@@ -121,7 +121,8 @@ int main()
     CHECK(room.GetMember(1001)->display_name == "甲玩家" && room.GetMember(1002)->display_name == "乙玩家",
           "battle cleanup preserves display names");
     CHECK(!room.in_battle(), "in_battle cleared");
-    CHECK(!room.GetMember(1001)->is_ready && !room.GetMember(1002)->is_ready, "real player ready cleared");
+    CHECK(room.GetMember(1001)->is_ready, "battle cleanup keeps host ready");
+    CHECK(!room.GetMember(1002)->is_ready, "battle cleanup clears joined player ready");
     CHECK(room.GetMember(1001)->battle_role_type == roomsvr::kDefaultBattleRoleType, "host role preserved");
     CHECK(room.GetMember(1002)->battle_role_type == roomsvr::kDefaultBattleRoleType, "second role preserved");
     CHECK(room.GetBot(bot_id)->is_ready && room.GetBot(bot_id)->battle_role_type == 7, "bot state preserved");
@@ -143,6 +144,44 @@ int main()
     CHECK(departure_summary.players_size() == 2 && departure_summary.players(1).gid() == 3002 &&
               departure_summary.players(1).kills() == 4,
           "frozen battle roster preserves settled player after leaving room");
+
+    // 回归：同一房间连续两局。
+    // 线上曾出现房主打完一局后点开始永远无反应——ClearBattleState()把房主is_ready一起清成false，
+    // 而客户端只在首次进房点准备、结算后不会补发SetReady，AllReady()因此永远失败。
+    // 建房时房主默认已准备(RoomMgr::AddRoom传is_ready=true)，这里用同样的方式构造。
+    roomsvr::Room rematch_room(3, 5001, "rematch_test", 4);
+    CHECK(rematch_room.AddMember(5001, 1, true, "房主") == 0, "add auto-ready host");
+    std::string rematch_bot;
+    CHECK(rematch_room.AddBot(2, &rematch_bot, nullptr) == 0, "add bot for rematch room");
+    CHECK(rematch_room.real_player_count() == 1 && rematch_room.member_count() == 2,
+          "rematch room has 1 real player and 1 bot");
+    CHECK(rematch_room.AllReady(), "first battle can start");
+
+    rematch_room.BeginBattleGeneration();
+    rematch_room.SetInBattle("127.0.0.1:9100", "battle-r1");
+    rematch_room.SetInBattleState();
+    CHECK(rematch_room.state() == roomsvr::ROOM_STATE_IN_BATTLE, "rematch room entered battle");
+    rematch_room.ClearBattleState();
+
+    CHECK(rematch_room.state() == roomsvr::ROOM_STATE_WAITING, "settlement returns room to waiting");
+    CHECK(rematch_room.GetMember(5001)->is_ready, "host stays ready after settlement");
+    CHECK(rematch_room.GetBot(rematch_bot)->is_ready, "bot stays ready after settlement");
+    CHECK(rematch_room.AllReady(), "second battle can start without re-sending SetReady");
+
+    // 回归：房主战斗中掉线后房主迁移，新房主也必须是已准备态。
+    // 结算流程是 ClearBattleState() -> ApplyPendingLeaves() -> MigrateHost()，
+    // 迁移发生在准备态重置之后，若MigrateHost不补准备态，新房主会复现同一个卡死。
+    roomsvr::Room migrate_room(4, 6001, "migrate_test", 4);
+    CHECK(migrate_room.AddMember(6001, 1, true, "原房主") == 0, "add original host");
+    CHECK(migrate_room.AddMember(6002, 2, false, "后加入者") == 0, "add second real player");
+    std::string migrate_bot;
+    CHECK(migrate_room.AddBot(3, &migrate_bot, nullptr) == 0, "add bot for migrate room");
+    migrate_room.ClearBattleState();
+    CHECK(!migrate_room.GetMember(6002)->is_ready, "non-host ready cleared by settlement");
+    migrate_room.RemoveMember(6001);
+    CHECK(migrate_room.MigrateHost() == 6002, "host migrates to earliest remaining real player");
+    CHECK(migrate_room.GetMember(6002)->is_ready, "migrated host is marked ready");
+    CHECK(migrate_room.AllReady(), "migrated host can start the next battle");
 
     std::puts("ALL ROOM TESTS PASSED");
     return 0;

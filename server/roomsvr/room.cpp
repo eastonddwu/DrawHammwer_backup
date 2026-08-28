@@ -340,6 +340,10 @@ uint64_t Room::MigrateHost()
         return 0;  // 只有房主一人，无人可转
 
     host_gid_ = earliest->gid;
+    // 维持"房主恒定已准备"不变量：建房、切地图、结算都保证房主是已准备态，
+    // 房主迁移同样要补上，否则新房主点开始会被AllReady()挡住且客户端不会补发SetReady。
+    if (RoomMemberData* new_host = GetMember(host_gid_))
+        new_host->is_ready = true;
     APP_LOG_INFO(host_gid_, "host migrated, room_id(%llu), new_host(%llu)", static_cast<unsigned long long>(room_id_),
                  static_cast<unsigned long long>(host_gid_));
     return host_gid_;
@@ -554,12 +558,15 @@ void Room::ClearBattleState()
     battle_start_time_ms_ = 0;
     dsa_svr_id_ = 0;
     ds_conn_info_.Clear();
+    // 结算后重置准备态：Bot恒定已准备；房主保持已准备(与建房、切地图一致，房主无需重复点准备)；
+    // 其余真人清空，需重新点准备才能开下一局。
+    // 房主若被一起清掉，客户端不会再补发SetReady，AllReady()将永远失败，同一房间无法开第二局。
     for (auto& m : members_)
     {
         if (m.b_is_bot)
             m.is_ready = true;
         else
-            m.is_ready = false;
+            m.is_ready = (m.gid == host_gid_);
     }
 }
 

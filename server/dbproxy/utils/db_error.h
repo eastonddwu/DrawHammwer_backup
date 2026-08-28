@@ -19,6 +19,7 @@ constexpr int32_t DB_ERR_NOT_FIN = -70013;
 constexpr int32_t DB_ERR_SIZE_OVER_FLOW = -70023;
 constexpr int32_t DB_ERR_INVALID_VERSION = -70027;
 constexpr int32_t DB_ERR_MYSQL = -70030;  // mysql后端专用错误码，与DB_ERR_TCAPLUS并列
+constexpr int32_t DB_ERR_BUSY = -70031;   // mysql连接池排队超时，调用方可重试
 
 }  // namespace dbproxy
 
